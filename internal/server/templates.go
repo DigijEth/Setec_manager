@@ -5,37 +5,9 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"sync"
 
 	"setec-manager/web"
 )
-
-var (
-	tmplOnce sync.Once
-	tmpl     *template.Template
-)
-
-func (s *Server) getTemplates() *template.Template {
-	tmplOnce.Do(func() {
-		funcMap := template.FuncMap{
-			"eq":      func(a, b interface{}) bool { return a == b },
-			"ne":      func(a, b interface{}) bool { return a != b },
-			"default": func(val, def interface{}) interface{} {
-				if val == nil || val == "" || val == 0 || val == false {
-					return def
-				}
-				return val
-			},
-		}
-
-		var err error
-		tmpl, err = template.New("").Funcs(funcMap).ParseFS(web.TemplateFS, "templates/*.html")
-		if err != nil {
-			log.Fatalf("Failed to parse templates: %v", err)
-		}
-	})
-	return tmpl
-}
 
 type templateData struct {
 	Title   string
@@ -51,9 +23,11 @@ func (s *Server) renderTemplate(w http.ResponseWriter, name string, data interfa
 		Config: s.Config,
 	}
 
-	t := s.getTemplates().Lookup(name)
-	if t == nil {
-		http.Error(w, "Template not found: "+name, http.StatusInternalServerError)
+	// Login page is standalone (full HTML doc), not wrapped in base.html
+	t, err := template.New(name).ParseFS(web.TemplateFS, "templates/"+name)
+	if err != nil {
+		log.Printf("Template parse error (%s): %v", name, err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
 	}
 
@@ -70,9 +44,10 @@ func (s *Server) renderTemplateWithClaims(w http.ResponseWriter, r *http.Request
 		Config: s.Config,
 	}
 
-	t := s.getTemplates().Lookup(name)
-	if t == nil {
-		http.Error(w, "Template not found: "+name, http.StatusInternalServerError)
+	t, err := template.New("base.html").ParseFS(web.TemplateFS, "templates/base.html", "templates/"+name)
+	if err != nil {
+		log.Printf("Template parse error (%s): %v", name, err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
 	}
 
