@@ -84,7 +84,7 @@ func (h *Handler) render(w http.ResponseWriter, name string, data interface{}) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.Execute(w, pd); err != nil {
-		log.Printf("[template] render %s: %v", name, err)
+		log.Printf("[template] render %s: %v (data type: %T)", name, err, data)
 	}
 }
 

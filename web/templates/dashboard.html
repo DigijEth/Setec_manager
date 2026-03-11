@@ -1,53 +1,60 @@
 {{define "content"}}
 <h2>Dashboard</h2>
-<div class="stats-grid">
-    <div class="stat-card">
-        <h3>System</h3>
-        <p><strong>Hostname:</strong> {{.Data.Hostname}}</p>
-        <p><strong>OS:</strong> {{.Data.OS}} / {{.Data.Arch}}</p>
-        <p><strong>CPUs:</strong> {{.Data.CPUs}}</p>
-        <p><strong>Uptime:</strong> {{.Data.Uptime}}</p>
-        <p><strong>Load:</strong> {{.Data.LoadAvg}}</p>
-    </div>
-    <div class="stat-card">
-        <h3>Memory</h3>
-        <div class="progress-bar">
-            <div class="progress-fill" style="width: {{printf "%.0f" .Data.MemPercent}}%"></div>
+<div id="dashboard-content">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>System</h3>
+            <p><strong>Hostname:</strong> <span id="sys-hostname">—</span></p>
+            <p><strong>OS:</strong> <span id="sys-os">—</span></p>
+            <p><strong>CPUs:</strong> <span id="sys-cpus">—</span></p>
+            <p><strong>Uptime:</strong> <span id="sys-uptime">—</span></p>
+            <p><strong>Load:</strong> <span id="sys-load">—</span></p>
         </div>
-        <p>{{.Data.MemUsed}} / {{.Data.MemTotal}} ({{printf "%.1f" .Data.MemPercent}}%)</p>
-    </div>
-    <div class="stat-card">
-        <h3>Disk</h3>
-        <div class="progress-bar">
-            <div class="progress-fill" style="width: {{printf "%.0f" .Data.DiskPercent}}%"></div>
+        <div class="stat-card">
+            <h3>Memory</h3>
+            <div class="progress-bar"><div class="progress-fill" id="mem-bar" style="width:0%"></div></div>
+            <p id="mem-text">—</p>
         </div>
-        <p>{{.Data.DiskUsed}} / {{.Data.DiskTotal}} ({{printf "%.1f" .Data.DiskPercent}}%)</p>
+        <div class="stat-card">
+            <h3>Disk</h3>
+            <div class="progress-bar"><div class="progress-fill" id="disk-bar" style="width:0%"></div></div>
+            <p id="disk-text">—</p>
+        </div>
+        <div class="stat-card">
+            <h3>Sites</h3>
+            <p class="big-number" id="site-count">—</p>
+            <a href="/sites" class="btn btn-sm">Manage Sites</a>
+        </div>
     </div>
-    <div class="stat-card">
-        <h3>Sites</h3>
-        <p class="big-number">{{.Data.SiteCount}}</p>
-        <a href="/sites" class="btn btn-sm">Manage Sites</a>
-    </div>
+    <h3>Services</h3>
+    <table class="data-table">
+        <thead><tr><th>Service</th><th>Status</th></tr></thead>
+        <tbody id="services-tbody"></tbody>
+    </table>
 </div>
-
-<h3>Services</h3>
-<table class="data-table">
-    <thead>
-        <tr><th>Service</th><th>Status</th></tr>
-    </thead>
-    <tbody>
-        {{range .Data.Services}}
-        <tr>
-            <td>{{.Name}}</td>
-            <td>
-                {{if .Running}}
-                    <span class="badge badge-ok">{{.Status}}</span>
-                {{else}}
-                    <span class="badge badge-err">{{.Status}}</span>
-                {{end}}
-            </td>
-        </tr>
-        {{end}}
-    </tbody>
-</table>
+<script>
+(function(){
+    fetch('/api/system/info').then(r=>r.json()).then(d=>{
+        document.getElementById('sys-hostname').textContent = d.hostname || '—';
+        document.getElementById('sys-os').textContent = (d.os||'') + ' / ' + (d.arch||'');
+        document.getElementById('sys-cpus').textContent = d.cpus || '—';
+        document.getElementById('sys-uptime').textContent = d.uptime || '—';
+        document.getElementById('sys-load').textContent = d.load_avg || '—';
+        const mp = (d.mem_percent||0).toFixed(1);
+        document.getElementById('mem-bar').style.width = Math.round(d.mem_percent||0)+'%';
+        document.getElementById('mem-text').textContent = (d.mem_used||'—')+' / '+(d.mem_total||'—')+' ('+mp+'%)';
+        const dp = (d.disk_percent||0).toFixed(1);
+        document.getElementById('disk-bar').style.width = Math.round(d.disk_percent||0)+'%';
+        document.getElementById('disk-text').textContent = (d.disk_used||'—')+' / '+(d.disk_total||'—')+' ('+dp+'%)';
+        document.getElementById('site-count').textContent = d.site_count || 0;
+        const tb = document.getElementById('services-tbody');
+        (d.services||[]).forEach(s=>{
+            const tr = document.createElement('tr');
+            const cls = s.running ? 'badge-ok' : 'badge-err';
+            tr.innerHTML = '<td>'+s.name+'</td><td><span class="badge '+cls+'">'+s.status+'</span></td>';
+            tb.appendChild(tr);
+        });
+    }).catch(e=>{ console.error('Dashboard load error:', e); });
+})();
+</script>
 {{end}}
