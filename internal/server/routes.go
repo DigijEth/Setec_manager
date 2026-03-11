@@ -61,6 +61,29 @@ func (s *Server) setupRoutes() {
 		r.Put("/autarch/config", h.AutarchConfigUpdate)
 		r.Post("/autarch/dns/build", h.AutarchDNSBuild)
 
+		// Git / Code Repository Management
+		r.Get("/git", h.GitSetup)
+		r.Get("/git/setup", h.GitSetupWizard)
+		r.Post("/git/install", h.GitInstall)
+		r.Get("/git/status", h.GitStatus)
+		r.Post("/git/uninstall", h.GitUninstall)
+		r.Get("/git/repos", h.GitRepos)
+		r.Post("/git/repos", h.GitRepoCreate)
+		r.Delete("/git/repos/{owner}/{repo}", h.GitRepoDelete)
+		r.Get("/git/repos/{owner}/{repo}", h.GitRepoGet)
+		r.Post("/git/repos/mirror", h.GitRepoMirror)
+		r.Get("/git/users", h.GitUsers)
+		r.Post("/git/users", h.GitUserCreate)
+		r.Delete("/git/users/{username}", h.GitUserDelete)
+		r.Post("/git/users/{username}/reset-password", h.GitUserResetPassword)
+		r.Patch("/git/users/{username}", h.GitUserUpdate)
+		r.Get("/git/orgs", h.GitOrgs)
+		r.Post("/git/orgs", h.GitOrgCreate)
+		r.Delete("/git/orgs/{name}", h.GitOrgDelete)
+		r.Get("/git/orgs/{name}/members", h.GitOrgMembers)
+		r.Put("/git/orgs/{name}/members/{username}", h.GitOrgAddMember)
+		r.Delete("/git/orgs/{name}/members/{username}", h.GitOrgRemoveMember)
+
 		// SSL
 		r.Get("/ssl", h.SSLOverview)
 		r.Post("/ssl/{domain}/issue", h.SSLIssue)
@@ -89,9 +112,23 @@ func (s *Server) setupRoutes() {
 
 		// Panel users
 		r.Get("/panel/users", h.PanelUserList)
-		r.Post("/panel/users", h.PanelUserCreate)
-		r.Put("/panel/users/{id}", h.PanelUserUpdate)
-		r.Delete("/panel/users/{id}", h.PanelUserDelete)
+		r.Post("/users/panel", h.PanelUserCreate)
+		r.Patch("/users/panel/{id}", h.PanelUserUpdate)
+		r.Delete("/users/panel/{id}", h.PanelUserDelete)
+		r.Get("/users/panel/{id}/groups", h.PanelUserGroups)
+		r.Put("/users/panel/{id}/groups", h.PanelUserSetGroups)
+		r.Get("/users/panel/{id}/domains", h.PanelUserDomainAccess)
+		r.Post("/users/panel/{id}/domains", h.PanelUserGrantDomain)
+		r.Delete("/users/panel/{id}/domains/{accessId}", h.PanelUserRevokeDomain)
+
+		// Group Management
+		r.Get("/users/groups", h.GroupList)
+		r.Post("/users/groups", h.GroupCreate)
+		r.Patch("/users/groups/{id}", h.GroupUpdate)
+		r.Delete("/users/groups/{id}", h.GroupDelete)
+		r.Get("/users/groups/{id}/permissions", h.GroupPermissions)
+		r.Put("/users/groups/{id}/permissions", h.GroupSetPermissions)
+		r.Get("/users/groups/{id}/members", h.GroupMembers)
 
 		// Backups
 		r.Get("/backups", h.BackupList)

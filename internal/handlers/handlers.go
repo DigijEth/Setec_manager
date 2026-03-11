@@ -11,6 +11,7 @@ import (
 
 	"setec-manager/internal/config"
 	"setec-manager/internal/db"
+	"setec-manager/internal/gitea"
 	"setec-manager/internal/hosting"
 	"setec-manager/web"
 
@@ -21,16 +22,22 @@ type Handler struct {
 	Config         *config.Config
 	DB             *db.DB
 	HostingConfigs *hosting.ProviderConfigStore
+	GiteaClient    *gitea.Client
 	tmpl           *template.Template
 	once           sync.Once
 }
 
 func New(cfg *config.Config, database *db.DB, hostingConfigs *hosting.ProviderConfigStore) *Handler {
-	return &Handler{
+	h := &Handler{
 		Config:         cfg,
 		DB:             database,
 		HostingConfigs: hostingConfigs,
 	}
+	// Initialize Gitea client if configured
+	if cfg.Gitea.Installed && cfg.Gitea.BaseURL != "" && cfg.Gitea.AdminToken != "" {
+		h.GiteaClient = gitea.New(cfg.Gitea.BaseURL, cfg.Gitea.AdminToken)
+	}
+	return h
 }
 
 func (h *Handler) getTemplates() *template.Template {

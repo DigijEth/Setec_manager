@@ -13,8 +13,11 @@ import (
 type contextKey string
 
 const claimsKey contextKey = "claims"
+const permissionsKey contextKey = "permissions"
 
 // authRequired validates JWT from cookie or Authorization header.
+// After validation it loads the user's permission names from the database
+// and stores them in the request context for downstream handlers.
 func (s *Server) authRequired(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenStr := ""
@@ -56,6 +59,17 @@ func (s *Server) authRequired(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), claimsKey, claims)
+
+		// Load permissions from DB and cache in context
+		perms, err := s.DB.GetUserPermissions(claims.UserID)
+		if err == nil {
+			permSet := make(map[string]bool, len(perms))
+			for _, p := range perms {
+				permSet[p.Name] = true
+			}
+			ctx = context.WithValue(ctx, permissionsKey, permSet)
+		}
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -65,6 +79,11 @@ func (s *Server) adminRequired(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims := getClaimsFromContext(r.Context())
 		if claims == nil || claims.Role != "admin" {
+			// Also accept users in the "admin" group
+			if claims != nil && hasGroup(claims.Groups, "admin") {
+				next.ServeHTTP(w, r)
+				return
+			}
 			http.Error(w, "Admin access required", http.StatusForbidden)
 			return
 		}
@@ -72,9 +91,55 @@ func (s *Server) adminRequired(next http.Handler) http.Handler {
 	})
 }
 
+// permissionRequired returns middleware that checks if the authenticated user
+// has the specified permission. Returns 403 Forbidden if not.
+func (s *Server) permissionRequired(perm string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !hasPermissionFromContext(r.Context(), perm) {
+				// Admins (by legacy role field) always pass
+				claims := getClaimsFromContext(r.Context())
+				if claims != nil && (claims.Role == "admin" || hasGroup(claims.Groups, "admin")) {
+					next.ServeHTTP(w, r)
+					return
+				}
+				http.Error(w, "Forbidden: missing permission "+perm, http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 func getClaimsFromContext(ctx context.Context) *Claims {
 	claims, _ := ctx.Value(claimsKey).(*Claims)
 	return claims
+}
+
+// getPermissionsFromContext returns the permission set stored in the context
+// by authRequired. Returns nil if not present.
+func getPermissionsFromContext(ctx context.Context) map[string]bool {
+	perms, _ := ctx.Value(permissionsKey).(map[string]bool)
+	return perms
+}
+
+// hasPermissionFromContext checks whether the context carries the named permission.
+func hasPermissionFromContext(ctx context.Context, perm string) bool {
+	perms := getPermissionsFromContext(ctx)
+	if perms == nil {
+		return false
+	}
+	return perms[perm]
+}
+
+// hasGroup checks if a group name appears in the slice.
+func hasGroup(groups []string, name string) bool {
+	for _, g := range groups {
+		if g == name {
+			return true
+		}
+	}
+	return false
 }
 
 func acceptsHTML(r *http.Request) bool {

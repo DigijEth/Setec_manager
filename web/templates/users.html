@@ -1,56 +1,662 @@
 {{define "content"}}
 <div style="display:flex;justify-content:space-between;align-items:center">
-    <h2>Users</h2>
-    <button class="btn btn-primary" onclick="document.getElementById('newUserForm').style.display='block'">+ Add User</button>
+    <h2>User Management</h2>
 </div>
 
-<div id="newUserForm" style="display:none;margin-bottom:1.5rem">
-    <div class="stat-card">
-        <h3>New User</h3>
-        <form method="POST" action="/users">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
+<!-- Tabs -->
+<div class="tab-bar" id="userTabs">
+    <button class="tab active" data-tab="panel">Panel Users</button>
+    <button class="tab" data-tab="groups">User Groups</button>
+    <button class="tab" data-tab="system">System Users</button>
+</div>
+
+<!-- ═══════════ Tab 1: Panel Users ═══════════ -->
+<div class="tab-content active" id="tab-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="margin:0">Panel Users</h3>
+        <button class="btn btn-primary btn-sm" onclick="openModal('newPanelUserModal')">+ New User</button>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Role / Groups</th>
+                <th>Domain Access</th>
+                <th>Last Login</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="panelUserTableBody">
+            {{range .Data.PanelUsers}}
+            <tr>
+                <td>{{.Username}}</td>
+                <td>
+                    <span class="badge badge-ok">{{.Role}}</span>
+                    {{range .Groups}}
+                    <span class="badge">{{.}}</span>
+                    {{end}}
+                </td>
+                <td>{{.DomainCount}} domain(s)</td>
+                <td>{{.LastLogin}}</td>
+                <td>{{.CreatedAt}}</td>
+                <td style="display:flex;gap:.3rem;flex-wrap:wrap">
+                    <button class="btn btn-sm" onclick="editPanelUser({{.ID}}, '{{.Username}}')">Edit</button>
+                    <button class="btn btn-sm" onclick="manageDomains({{.ID}}, '{{.Username}}')">Domains</button>
+                    <button class="btn btn-sm" style="color:var(--err)" onclick="deletePanelUser({{.ID}}, '{{.Username}}')">Delete</button>
+                </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No panel users.</td></tr>
+            {{end}}
+        </tbody>
+    </table>
+
+    <!-- Domain Access Panel -->
+    <div id="domainAccessPanel" style="display:none;margin-top:1rem">
+        <div class="stat-card">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <h3 style="margin:0">Domain Access for <span id="domainAccessUser"></span></h3>
+                <button class="btn btn-sm" onclick="document.getElementById('domainAccessPanel').style.display='none'">Close</button>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+            <!-- Grant new access -->
+            <div style="margin-top:1rem;display:flex;gap:.5rem;align-items:end;flex-wrap:wrap">
+                <div class="form-group" style="margin-bottom:0;flex:1;min-width:150px">
+                    <label>Site</label>
+                    <select id="grantSiteId">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;min-width:120px">
+                    <label>Access Level</label>
+                    <select id="grantAccessLevel">
+                        <option value="read">Read</option>
+                        <option value="manage">Manage</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="grantDomainAccess()">Grant</button>
             </div>
-            <div class="form-group">
-                <label for="role">Role</label>
-                <select id="role" name="role">
-                    <option value="admin">Admin</option>
-                    <option value="viewer">Viewer</option>
-                </select>
-            </div>
-            <div style="display:flex;gap:.5rem">
-                <button type="submit" class="btn btn-primary btn-sm">Create</button>
-                <button type="button" class="btn btn-sm" onclick="this.closest('#newUserForm').style.display='none'">Cancel</button>
-            </div>
-        </form>
+            <table class="data-table" style="margin-top:.75rem">
+                <thead>
+                    <tr><th>Domain / Pattern</th><th>Access Level</th><th>Granted At</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="domainAccessList"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<table class="data-table">
-    <thead>
-        <tr><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-        {{range .Data.Users}}
-        <tr>
-            <td>{{.Username}}</td>
-            <td><span class="badge badge-ok">{{.Role}}</span></td>
-            <td>{{.Created}}</td>
-            <td>
-                <form method="POST" action="/users/{{.Username}}/delete" style="display:inline"
-                      onsubmit="return confirm('Delete user {{.Username}}?')">
-                    <button class="btn btn-sm">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {{else}}
-        <tr><td colspan="4">No users.</td></tr>
-        {{end}}
-    </tbody>
-</table>
+<!-- ═══════════ Tab 2: User Groups ═══════════ -->
+<div class="tab-content" id="tab-groups" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="margin:0">User Groups</h3>
+        <button class="btn btn-primary btn-sm" onclick="openModal('newGroupModal')">+ New Group</button>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Group Name</th>
+                <th>Description</th>
+                <th>Members</th>
+                <th>System</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="groupTableBody">
+            {{range .Data.Groups}}
+            <tr>
+                <td>
+                    {{if .IsSystem}}<svg style="width:14px;height:14px;vertical-align:middle;margin-right:4px;color:var(--text-muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>{{end}}
+                    {{.DisplayName}}
+                </td>
+                <td style="color:var(--text-muted)">{{.Description}}</td>
+                <td>{{.MemberCount}}</td>
+                <td>
+                    {{if .IsSystem}}<span class="badge">System</span>{{else}}<span class="badge badge-ok">Custom</span>{{end}}
+                </td>
+                <td style="display:flex;gap:.3rem">
+                    <button class="btn btn-sm" onclick="manageGroupPerms({{.ID}}, '{{.DisplayName}}')">Permissions</button>
+                    {{if not .IsSystem}}
+                    <button class="btn btn-sm" style="color:var(--err)" onclick="deleteGroup({{.ID}}, '{{.DisplayName}}')">Delete</button>
+                    {{end}}
+                </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No groups.</td></tr>
+            {{end}}
+        </tbody>
+    </table>
+
+    <!-- Group Permissions Panel -->
+    <div id="groupPermsPanel" style="display:none;margin-top:1rem">
+        <div class="stat-card">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <h3 style="margin:0">Permissions for <span id="groupPermsName"></span></h3>
+                <div style="display:flex;gap:.5rem">
+                    <button class="btn btn-primary btn-sm" onclick="saveGroupPerms()">Save Permissions</button>
+                    <button class="btn btn-sm" onclick="document.getElementById('groupPermsPanel').style.display='none'">Close</button>
+                </div>
+            </div>
+            <div id="groupPermsGrid" style="margin-top:1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ Tab 3: System Users ═══════════ -->
+<div class="tab-content" id="tab-system" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="margin:0">System Users</h3>
+        <button class="btn btn-primary btn-sm" onclick="openModal('newSysUserModal')">+ Add User</button>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr><th>Username</th><th>UID</th><th>Home</th><th>Shell</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {{range .Data.SystemUsers}}
+            <tr>
+                <td>{{.Username}}</td>
+                <td>{{.UID}}</td>
+                <td><code>{{.HomeDir}}</code></td>
+                <td><code>{{.Shell}}</code></td>
+                <td>
+                    <button class="btn btn-sm" style="color:var(--err)"
+                        onclick="deleteSysUser('{{.Username}}')"
+                    >Delete</button>
+                </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No system users.</td></tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<!-- ═══════════ Modals ═══════════ -->
+
+<!-- New Panel User Modal -->
+<div class="modal-overlay" id="newPanelUserModal" style="display:none" onclick="if(event.target===this)closeModal('newPanelUserModal')">
+    <div class="modal-box">
+        <h3>New Panel User</h3>
+        <div class="form-group">
+            <label for="npUsername">Username</label>
+            <input type="text" id="npUsername">
+        </div>
+        <div class="form-group">
+            <label for="npPassword">Password</label>
+            <input type="password" id="npPassword">
+        </div>
+        <div class="form-group">
+            <label for="npEmail">Email</label>
+            <input type="email" id="npEmail">
+        </div>
+        <div class="form-group">
+            <label>Groups</label>
+            <div id="npGroupCheckboxes" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.3rem">
+                {{range .Data.Groups}}
+                <label style="display:flex;align-items:center;gap:.3rem;color:var(--text);font-size:.85rem;cursor:pointer">
+                    <input type="checkbox" name="np_group" value="{{.ID}}" {{if eq .Name "admin"}}checked{{end}}> {{.DisplayName}}
+                </label>
+                {{end}}
+            </div>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('newPanelUserModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createPanelUser()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Panel User Modal -->
+<div class="modal-overlay" id="editPanelUserModal" style="display:none" onclick="if(event.target===this)closeModal('editPanelUserModal')">
+    <div class="modal-box">
+        <h3>Edit User: <span id="editPanelUsername"></span></h3>
+        <input type="hidden" id="editPanelUserId">
+        <div class="form-group">
+            <label for="editPanelPassword">New Password (leave blank to keep)</label>
+            <input type="password" id="editPanelPassword">
+        </div>
+        <div class="form-group">
+            <label for="editPanelRole">Role</label>
+            <select id="editPanelRole">
+                <option value="admin">Admin</option>
+                <option value="viewer">Viewer</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Groups</label>
+            <div id="editGroupCheckboxes" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.3rem"></div>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('editPanelUserModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="updatePanelUser()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Group Modal -->
+<div class="modal-overlay" id="newGroupModal" style="display:none" onclick="if(event.target===this)closeModal('newGroupModal')">
+    <div class="modal-box" style="max-width:420px">
+        <h3>New Group</h3>
+        <div class="form-group">
+            <label for="ngName">Name (slug)</label>
+            <input type="text" id="ngName" placeholder="custom-group">
+        </div>
+        <div class="form-group">
+            <label for="ngDisplayName">Display Name</label>
+            <input type="text" id="ngDisplayName" placeholder="Custom Group">
+        </div>
+        <div class="form-group">
+            <label for="ngDescription">Description</label>
+            <input type="text" id="ngDescription">
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('newGroupModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createGroup()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- New System User Modal -->
+<div class="modal-overlay" id="newSysUserModal" style="display:none" onclick="if(event.target===this)closeModal('newSysUserModal')">
+    <div class="modal-box" style="max-width:420px">
+        <h3>New System User</h3>
+        <div class="form-group">
+            <label for="nsUsername">Username</label>
+            <input type="text" id="nsUsername">
+        </div>
+        <div class="form-group">
+            <label for="nsPassword">Password</label>
+            <input type="password" id="nsPassword">
+        </div>
+        <div class="form-group">
+            <label for="nsShell">Shell</label>
+            <select id="nsShell">
+                <option value="/bin/bash">/bin/bash</option>
+                <option value="/bin/sh">/bin/sh</option>
+                <option value="/usr/sbin/nologin">/usr/sbin/nologin</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('newSysUserModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createSysUser()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1.25rem;font-size:.9rem;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,.3)"></div>
+
+<style>
+.tab-bar { display:flex; gap:0; margin-bottom:1.5rem; border-bottom:2px solid var(--border); }
+.tab { padding:.6rem 1.2rem; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:.9rem; border-bottom:2px solid transparent; margin-bottom:-2px; transition:color .15s,border-color .15s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:100; display:flex; align-items:center; justify-content:center; }
+.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
+.modal-box h3 { margin:0 0 1rem; }
+.perm-category { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem; }
+.perm-category h4 { margin:0 0 .5rem; font-size:.85rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:.03em; }
+.perm-item { display:flex; align-items:center; gap:.3rem; font-size:.85rem; color:var(--text); margin-bottom:.2rem; }
+.perm-item label { cursor:pointer; }
+</style>
+
+<script>
+(function(){
+    var _currentDomainUserId = 0;
+    var _currentGroupId = 0;
+    var _allPermissions = [];
+    var _allGroups = [];
+
+    // ── Tab Switching ──
+    document.querySelectorAll('#userTabs .tab').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            document.querySelectorAll('#userTabs .tab').forEach(function(b){ b.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(c){ c.style.display='none'; });
+            btn.classList.add('active');
+            var target = document.getElementById('tab-' + btn.dataset.tab);
+            if(target) target.style.display = 'block';
+        });
+    });
+
+    // ── Load permissions for group management ──
+    fetchAllPermissions();
+
+    function fetchAllPermissions() {
+        // Use the groups list endpoint to get permissions by category
+        // We'll load all permissions from the group permissions endpoint with a known group
+        // Actually, let's load from the panel user list which is server-rendered, and supplement with API
+    }
+
+    // ── Panel User Actions ──
+    window.openModal = function(id) { document.getElementById(id).style.display = 'flex'; };
+    window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
+
+    window.createPanelUser = function() {
+        var groupCheckboxes = document.querySelectorAll('input[name="np_group"]:checked');
+        var groupIds = [];
+        groupCheckboxes.forEach(function(cb){ groupIds.push(parseInt(cb.value)); });
+
+        var body = {
+            username: document.getElementById('npUsername').value,
+            password: document.getElementById('npPassword').value,
+            email: document.getElementById('npEmail').value,
+            role: 'admin',
+            group_ids: groupIds
+        };
+        if(!body.username || !body.password) { showToast('Username and password are required', 'err'); return; }
+        fetch('/users/panel', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { closeModal('newPanelUserModal'); showToast('User created', 'ok'); location.reload(); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.editPanelUser = function(id, username) {
+        document.getElementById('editPanelUserId').value = id;
+        document.getElementById('editPanelUsername').textContent = username;
+        document.getElementById('editPanelPassword').value = '';
+
+        // Load user's groups
+        fetch('/users/groups', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(groups){
+            _allGroups = groups || [];
+            return fetch('/users/panel/' + id + '/groups', {headers:{'Accept':'application/json'}});
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(userGroups){
+            var userGroupIds = {};
+            if(userGroups) userGroups.forEach(function(g){ userGroupIds[g.id] = true; });
+
+            var container = document.getElementById('editGroupCheckboxes');
+            container.innerHTML = _allGroups.map(function(g){
+                var checked = userGroupIds[g.id] ? 'checked' : '';
+                return '<label style="display:flex;align-items:center;gap:.3rem;color:var(--text);font-size:.85rem;cursor:pointer">' +
+                    '<input type="checkbox" name="edit_group" value="'+g.id+'" '+checked+'> '+esc(g.display_name) + '</label>';
+            }).join('');
+
+            openModal('editPanelUserModal');
+        })
+        .catch(function(e){ showToast('Error loading groups', 'err'); });
+    };
+
+    window.updatePanelUser = function() {
+        var id = document.getElementById('editPanelUserId').value;
+        var password = document.getElementById('editPanelPassword').value;
+        var role = document.getElementById('editPanelRole').value;
+
+        // Update user
+        var body = { role: role };
+        if(password) body.password = password;
+
+        fetch('/users/panel/' + id, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(){
+            // Update groups
+            var groupCheckboxes = document.querySelectorAll('input[name="edit_group"]:checked');
+            var groupIds = [];
+            groupCheckboxes.forEach(function(cb){ groupIds.push(parseInt(cb.value)); });
+
+            return fetch('/users/panel/' + id + '/groups', {
+                method:'PUT',
+                headers:{'Content-Type':'application/json','Accept':'application/json'},
+                body: JSON.stringify({group_ids: groupIds})
+            });
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(){
+            closeModal('editPanelUserModal');
+            showToast('User updated', 'ok');
+            location.reload();
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.deletePanelUser = function(id, username) {
+        if(!confirm('Delete panel user "' + username + '"?')) return;
+        fetch('/users/panel/' + id, {method:'DELETE', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ showToast('User deleted', 'ok'); location.reload(); })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    // ── Domain Access ──
+    window.manageDomains = function(userId, username) {
+        _currentDomainUserId = userId;
+        document.getElementById('domainAccessUser').textContent = username;
+        document.getElementById('domainAccessPanel').style.display = 'block';
+        loadDomainAccess(userId);
+        loadSitesDropdown();
+    };
+
+    function loadDomainAccess(userId) {
+        fetch('/users/panel/' + userId + '/domains', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(accesses){
+            var tbody = document.getElementById('domainAccessList');
+            if(!accesses || !accesses.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted)">No domain access entries.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = accesses.map(function(a){
+                var domain = a.domain_pattern || ('Site #' + (a.site_id || '--'));
+                var level = '<span class="badge ' + (a.access_level==='admin' ? 'badge-ok' : '') + '">' + a.access_level + '</span>';
+                return '<tr><td>' + esc(domain) + '</td><td>' + level + '</td><td>' + (a.granted_at||'--') + '</td>' +
+                    '<td><button class="btn btn-sm" style="color:var(--err)" onclick="revokeDomainAccess(' + a.id + ')">Revoke</button></td></tr>';
+            }).join('');
+        })
+        .catch(function(){ document.getElementById('domainAccessList').innerHTML = '<tr><td colspan="4" style="color:var(--err)">Failed to load</td></tr>'; });
+    }
+
+    function loadSitesDropdown() {
+        fetch('/sites', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(sites){
+            var sel = document.getElementById('grantSiteId');
+            sel.innerHTML = '<option value="">-- select site --</option>';
+            if(sites) sites.forEach(function(s){
+                var d = s.Domain || s.domain;
+                var id = s.ID || s.id;
+                if(d && id) {
+                    var opt = document.createElement('option');
+                    opt.value = id; opt.textContent = d;
+                    sel.appendChild(opt);
+                }
+            });
+        })
+        .catch(function(){});
+    }
+
+    window.grantDomainAccess = function() {
+        var siteId = parseInt(document.getElementById('grantSiteId').value) || 0;
+        var accessLevel = document.getElementById('grantAccessLevel').value;
+        if(!siteId) { showToast('Please select a site', 'err'); return; }
+
+        fetch('/users/panel/' + _currentDomainUserId + '/domains', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify({site_id: siteId, access_level: accessLevel})
+        })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { showToast('Access granted', 'ok'); loadDomainAccess(_currentDomainUserId); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.revokeDomainAccess = function(accessId) {
+        if(!confirm('Revoke this domain access?')) return;
+        fetch('/users/panel/' + _currentDomainUserId + '/domains/' + accessId, {
+            method:'DELETE', headers:{'Accept':'application/json'}
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ showToast('Access revoked', 'ok'); loadDomainAccess(_currentDomainUserId); })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    // ── Group Management ──
+    window.createGroup = function() {
+        var body = {
+            name: document.getElementById('ngName').value,
+            display_name: document.getElementById('ngDisplayName').value,
+            description: document.getElementById('ngDescription').value
+        };
+        if(!body.name || !body.display_name) { showToast('Name and display name are required', 'err'); return; }
+        fetch('/users/groups', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { closeModal('newGroupModal'); showToast('Group created', 'ok'); location.reload(); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.deleteGroup = function(id, name) {
+        if(!confirm('Delete group "' + name + '"?')) return;
+        fetch('/users/groups/' + id, {method:'DELETE', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { showToast('Group deleted', 'ok'); location.reload(); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.manageGroupPerms = function(groupId, groupName) {
+        _currentGroupId = groupId;
+        document.getElementById('groupPermsName').textContent = groupName;
+        document.getElementById('groupPermsPanel').style.display = 'block';
+
+        // Load all permissions and current group permissions
+        Promise.all([
+            fetch('/users/groups/' + groupId + '/permissions', {headers:{'Accept':'application/json'}}).then(function(r){ return r.json(); }),
+            loadAllPermissions()
+        ])
+        .then(function(results){
+            var currentPerms = results[0] || [];
+            var allPerms = results[1] || [];
+            var currentPermIds = {};
+            currentPerms.forEach(function(p){ currentPermIds[p.id] = true; });
+
+            // Group permissions by category
+            var categories = {};
+            allPerms.forEach(function(p){
+                if(!categories[p.category]) categories[p.category] = [];
+                categories[p.category].push(p);
+            });
+
+            var grid = document.getElementById('groupPermsGrid');
+            grid.innerHTML = '';
+            var catOrder = ['sites','ssl','nginx','firewall','users','backups','monitor','logs','hosting','git','system','float'];
+            catOrder.forEach(function(cat){
+                var perms = categories[cat];
+                if(!perms) return;
+                var div = document.createElement('div');
+                div.className = 'perm-category';
+                div.innerHTML = '<h4>' + cat + '</h4>';
+                perms.forEach(function(p){
+                    var checked = currentPermIds[p.id] ? 'checked' : '';
+                    div.innerHTML += '<div class="perm-item"><label><input type="checkbox" name="perm_cb" value="'+p.id+'" '+checked+'> '+esc(p.display_name)+'</label></div>';
+                });
+                grid.appendChild(div);
+            });
+        })
+        .catch(function(e){ showToast('Error loading permissions', 'err'); });
+    };
+
+    function loadAllPermissions() {
+        // Get permissions from a known group (admin has all)
+        // Better: load groups list and get admin group, then its perms
+        return fetch('/users/groups', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(groups){
+            // Find admin group
+            var adminGroup = groups.find(function(g){ return g.name === 'admin'; });
+            if(!adminGroup) return [];
+            return fetch('/users/groups/' + adminGroup.id + '/permissions', {headers:{'Accept':'application/json'}})
+            .then(function(r){ return r.json(); });
+        });
+    }
+
+    window.saveGroupPerms = function() {
+        var checkboxes = document.querySelectorAll('input[name="perm_cb"]:checked');
+        var permIds = [];
+        checkboxes.forEach(function(cb){ permIds.push(parseInt(cb.value)); });
+
+        fetch('/users/groups/' + _currentGroupId + '/permissions', {
+            method:'PUT',
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify({permission_ids: permIds})
+        })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { showToast('Permissions saved', 'ok'); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    // ── System Users ──
+    window.createSysUser = function() {
+        var body = {
+            username: document.getElementById('nsUsername').value,
+            password: document.getElementById('nsPassword').value,
+            shell: document.getElementById('nsShell').value
+        };
+        if(!body.username || !body.password) { showToast('Username and password are required', 'err'); return; }
+        fetch('/users', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { closeModal('newSysUserModal'); showToast('System user created', 'ok'); location.reload(); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.deleteSysUser = function(username) {
+        if(!confirm('Delete system user "' + username + '"? This removes the OS account.')) return;
+        fetch('/users/' + encodeURIComponent(username), {method:'DELETE', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { showToast('User deleted', 'ok'); location.reload(); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    // ── Utilities ──
+    function esc(s) { var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.display = 'block';
+        t.style.borderColor = type==='ok' ? 'var(--ok)' : type==='err' ? 'var(--err)' : 'var(--primary)';
+        t.style.color = type==='ok' ? 'var(--ok)' : type==='err' ? 'var(--err)' : 'var(--text)';
+        clearTimeout(t._timer);
+        t._timer = setTimeout(function(){ t.style.display='none'; }, 4000);
+    }
+})();
+</script>
 {{end}}

@@ -58,6 +58,14 @@ func main() {
 		return
 	}
 
+	// Seed RBAC permissions and default groups
+	if err := database.SeedPermissions(); err != nil {
+		log.Fatalf("[setec] Failed to seed permissions: %v", err)
+	}
+	if err := database.SeedDefaultGroups(); err != nil {
+		log.Fatalf("[setec] Failed to seed default groups: %v", err)
+	}
+
 	// Check if any admin users exist
 	count, _ := database.ManagerUserCount()
 	if count == 0 {
@@ -65,7 +73,11 @@ func main() {
 		log.Println("[setec]   Username: admin")
 		log.Println("[setec]   Password: autarch")
 		log.Println("[setec]   ** CHANGE THIS IMMEDIATELY **")
-		database.CreateManagerUser("admin", "autarch", "admin")
+		adminID, _ := database.CreateManagerUser("admin", "autarch", "admin")
+		// Add default admin to the Admin group
+		if adminGroup, err := database.GetGroupByName("admin"); err == nil && adminGroup != nil {
+			database.AddUserToGroup(adminID, adminGroup.ID)
+		}
 	}
 
 	// Load or create persistent JWT key
@@ -205,11 +217,19 @@ func runSetup(cfg *config.Config, database *db.DB, configPath string) {
 	log.Println("[setup] Configuring nginx snippets...")
 	nginx.InstallSnippets(cfg)
 
+	// Seed RBAC
+	log.Println("[setup] Seeding permissions and groups...")
+	database.SeedPermissions()
+	database.SeedDefaultGroups()
+
 	// Create admin user
 	count, _ := database.ManagerUserCount()
 	if count == 0 {
 		log.Println("[setup] Creating default admin user (admin / autarch)")
-		database.CreateManagerUser("admin", "autarch", "admin")
+		adminID, _ := database.CreateManagerUser("admin", "autarch", "admin")
+		if adminGroup, err := database.GetGroupByName("admin"); err == nil && adminGroup != nil {
+			database.AddUserToGroup(adminID, adminGroup.ID)
+		}
 	}
 
 	// Save config

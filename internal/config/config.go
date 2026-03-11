@@ -12,9 +12,21 @@ type Config struct {
 	Nginx    NginxConfig    `yaml:"nginx"`
 	ACME     ACMEConfig     `yaml:"acme"`
 	Autarch  AutarchConfig  `yaml:"autarch"`
+	Gitea    GiteaConfig    `yaml:"gitea"`
 	Float    FloatConfig    `yaml:"float"`
 	Backups  BackupsConfig  `yaml:"backups"`
 	Logging  LoggingConfig  `yaml:"logging"`
+}
+
+type GiteaConfig struct {
+	Installed  bool   `yaml:"installed"`
+	BaseURL    string `yaml:"base_url"`
+	AdminToken string `yaml:"admin_token"`
+	Domain     string `yaml:"domain"`
+	URLStyle   string `yaml:"url_style"`
+	SSHPort    int    `yaml:"ssh_port"`
+	DataDir    string `yaml:"data_dir"`
+	BinaryPath string `yaml:"binary_path"`
 }
 
 type ServerConfig struct {
@@ -100,6 +112,12 @@ func DefaultConfig() *Config {
 			GitBranch:  "main",
 			WebPort:    8181,
 			DNSPort:    53,
+		},
+		Gitea: GiteaConfig{
+			Installed:  false,
+			SSHPort:    2222,
+			DataDir:    "/opt/gitea",
+			BinaryPath: "/usr/local/bin/gitea",
 		},
 		Float: FloatConfig{
 			Enabled:     false,

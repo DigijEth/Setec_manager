@@ -54,6 +54,11 @@ func (d *DB) migrate() error {
 		migrateFloatSessions,
 		migrateBackups,
 		migrateAuditLog,
+		migrateUserGroups,
+		migratePermissions,
+		migrateGroupPermissions,
+		migrateUserGroupMembership,
+		migrateUserDomainAccess,
 	}
 
 	for _, m := range migrations {

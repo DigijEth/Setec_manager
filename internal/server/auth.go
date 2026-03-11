@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -9,9 +10,10 @@ import (
 )
 
 type Claims struct {
-	UserID   int64  `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID   int64    `json:"user_id"`
+	Username string   `json:"username"`
+	Role     string   `json:"role"`
+	Groups   []string `json:"groups,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -21,9 +23,10 @@ type loginRequest struct {
 }
 
 type loginResponse struct {
-	Token    string `json:"token"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	Token    string   `json:"token"`
+	Username string   `json:"username"`
+	Role     string   `json:"role"`
+	Groups   []string `json:"groups,omitempty"`
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -43,11 +46,19 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Load user's group names for JWT
+	groups, err := s.DB.GetUserGroupNames(user.ID)
+	if err != nil {
+		log.Printf("[auth] Warning: failed to load groups for user %s: %v", user.Username, err)
+		groups = nil
+	}
+
 	// Generate JWT
 	claims := &Claims{
 		UserID:   user.ID,
 		Username: user.Username,
 		Role:     user.Role,
+		Groups:   groups,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -76,6 +87,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Token:    tokenStr,
 		Username: user.Username,
 		Role:     user.Role,
+		Groups:   groups,
 	})
 }
 
@@ -100,6 +112,7 @@ func (s *Server) handleAuthStatus(w http.ResponseWriter, r *http.Request) {
 		"user_id":  claims.UserID,
 		"username": claims.Username,
 		"role":     claims.Role,
+		"groups":   claims.Groups,
 	})
 }
 

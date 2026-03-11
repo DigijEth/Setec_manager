@@ -1,0 +1,959 @@
+{{define "content"}}
+<div style="display:flex;justify-content:space-between;align-items:center">
+    <h2>Git Repository Management</h2>
+</div>
+
+<!-- Tabs -->
+<div class="tab-bar" id="gitTabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="repos">Repositories</button>
+    <button class="tab" data-tab="gitusers">Users</button>
+    <button class="tab" data-tab="orgs">Organizations</button>
+</div>
+
+<!-- ═══════════ Tab 1: Overview / Setup ═══════════ -->
+<div class="tab-content active" id="tab-overview">
+    <div id="setupSection" style="display:none">
+        <!-- Setup Wizard -->
+        <div class="stat-card" style="max-width:640px">
+            <h3 style="margin-top:0">Install Gitea</h3>
+            <p style="color:var(--text-muted);margin-bottom:1rem">Set up a self-hosted Git service with Gitea.</p>
+
+            <!-- Steps indicator -->
+            <div style="display:flex;gap:.5rem;margin-bottom:1.5rem" id="stepsIndicator">
+                <div class="step-dot active" data-step="1">1. URL</div>
+                <div class="step-dot" data-step="2">2. SSH</div>
+                <div class="step-dot" data-step="3">3. Admin</div>
+                <div class="step-dot" data-step="4">4. Install</div>
+            </div>
+
+            <!-- Step 1: URL Configuration -->
+            <div class="wizard-step active" id="wizStep1">
+                <div class="form-group">
+                    <label>URL Style</label>
+                    <div style="display:flex;gap:1rem;margin:.5rem 0">
+                        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;color:var(--text)">
+                            <input type="radio" name="url_style" value="subdomain" checked onchange="updateURLPreview()"> Subdomain
+                        </label>
+                        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;color:var(--text)">
+                            <input type="radio" name="url_style" value="subpath" onchange="updateURLPreview()"> Subpath
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="wiz_subdomain">Subdomain / Path</label>
+                    <input type="text" id="wiz_subdomain" value="git" oninput="updateURLPreview()">
+                </div>
+                <div class="form-group">
+                    <label for="wiz_domain">Domain</label>
+                    <select id="wiz_domain" onchange="updateURLPreview()">
+                        <option value="">-- select domain --</option>
+                    </select>
+                </div>
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-top:.75rem">
+                    <span style="color:var(--text-muted);font-size:.8rem">Your Git service will be at:</span><br>
+                    <strong id="urlPreview" style="color:var(--primary)">https://git.example.com</strong>
+                </div>
+                <div style="margin-top:1rem;text-align:right">
+                    <button class="btn btn-primary btn-sm" onclick="wizardNext(2)">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 2: SSH Configuration -->
+            <div class="wizard-step" id="wizStep2" style="display:none">
+                <div class="form-group">
+                    <label for="wiz_ssh_port">SSH Port</label>
+                    <input type="text" id="wiz_ssh_port" value="2222" placeholder="2222">
+                </div>
+                <p style="color:var(--text-muted);font-size:.85rem">The SSH port Gitea will listen on for Git-over-SSH operations.</p>
+                <div style="margin-top:1rem;display:flex;justify-content:space-between">
+                    <button class="btn btn-sm" onclick="wizardNext(1)">Back</button>
+                    <button class="btn btn-primary btn-sm" onclick="wizardNext(3)">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Admin Account -->
+            <div class="wizard-step" id="wizStep3" style="display:none">
+                <div class="form-group">
+                    <label for="wiz_admin_user">Admin Username</label>
+                    <input type="text" id="wiz_admin_user" value="admin">
+                </div>
+                <div class="form-group">
+                    <label for="wiz_admin_pass">Admin Password</label>
+                    <input type="password" id="wiz_admin_pass">
+                </div>
+                <div class="form-group">
+                    <label for="wiz_admin_email">Admin Email</label>
+                    <input type="email" id="wiz_admin_email" placeholder="admin@example.com">
+                </div>
+                <div style="margin-top:1rem;display:flex;justify-content:space-between">
+                    <button class="btn btn-sm" onclick="wizardNext(2)">Back</button>
+                    <button class="btn btn-primary btn-sm" onclick="wizardNext(4)">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Review & Install -->
+            <div class="wizard-step" id="wizStep4" style="display:none">
+                <h3 style="margin-top:0">Review Configuration</h3>
+                <table class="data-table" style="margin-bottom:1rem">
+                    <tbody>
+                        <tr><td style="color:var(--text-muted)">URL</td><td id="reviewURL"></td></tr>
+                        <tr><td style="color:var(--text-muted)">URL Style</td><td id="reviewStyle"></td></tr>
+                        <tr><td style="color:var(--text-muted)">SSH Port</td><td id="reviewSSH"></td></tr>
+                        <tr><td style="color:var(--text-muted)">Admin User</td><td id="reviewAdmin"></td></tr>
+                        <tr><td style="color:var(--text-muted)">Admin Email</td><td id="reviewEmail"></td></tr>
+                    </tbody>
+                </table>
+                <div id="installProgress" style="display:none;margin-bottom:1rem">
+                    <p style="color:var(--text-muted);font-size:.85rem" id="installStatusText">Installing Gitea...</p>
+                    <div class="progress-bar"><div class="progress-fill" id="installProgressBar" style="width:0%"></div></div>
+                </div>
+                <div id="installError" style="display:none" class="error-msg"></div>
+                <div style="display:flex;justify-content:space-between">
+                    <button class="btn btn-sm" id="wizBackBtn" onclick="wizardNext(3)">Back</button>
+                    <button class="btn btn-primary btn-sm" id="installBtn" onclick="installGitea()">Install Gitea</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="managementSection" style="display:none">
+        <!-- Status Card -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Status</h3>
+                <p><strong>Version:</strong> <span id="giteaVersion">--</span></p>
+                <p><strong>URL:</strong> <a id="giteaURLLink" href="#" target="_blank" style="color:var(--primary)">--</a></p>
+                <p><strong>Status:</strong> <span id="giteaRunning" class="badge">--</span></p>
+                <p><strong>Disk Usage:</strong> <span id="giteaDisk">--</span></p>
+            </div>
+            <div class="stat-card">
+                <h3>Repositories</h3>
+                <div class="big-number" id="statRepos">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>Users</h3>
+                <div class="big-number" id="statUsers">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>Organizations</h3>
+                <div class="big-number" id="statOrgs">--</div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:.5rem;margin-top:1rem">
+            <button class="btn btn-sm" onclick="giteaServiceAction('restart')">Restart Gitea</button>
+            <button class="btn btn-sm" onclick="giteaServiceAction('stop')">Stop Gitea</button>
+            <button class="btn btn-sm" onclick="giteaServiceAction('start')">Start Gitea</button>
+            <button class="btn btn-sm" style="color:var(--err);border-color:var(--err)" onclick="confirmUninstall()">Uninstall</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ Tab 2: Repositories ═══════════ -->
+<div class="tab-content" id="tab-repos" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="form-group" style="margin-bottom:0;flex:1;max-width:300px">
+            <input type="text" id="repoSearch" placeholder="Filter repositories..." oninput="filterRepos()">
+        </div>
+        <div style="display:flex;gap:.5rem">
+            <button class="btn btn-primary btn-sm" onclick="openModal('newRepoModal')">+ New Repository</button>
+            <button class="btn btn-sm" onclick="openModal('mirrorRepoModal')">Mirror Repository</button>
+        </div>
+    </div>
+    <table class="data-table" id="repoTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Owner</th>
+                <th>Visibility</th>
+                <th>Stars</th>
+                <th>Forks</th>
+                <th>Size</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="repoTableBody">
+            <tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ═══════════ Tab 3: Users ═══════════ -->
+<div class="tab-content" id="tab-gitusers" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="margin:0">Gitea Users</h3>
+        <button class="btn btn-primary btn-sm" onclick="openModal('newGitUserModal')">+ New User</button>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Full Name</th>
+                <th>Admin</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="gitUserTableBody">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ═══════════ Tab 4: Organizations ═══════════ -->
+<div class="tab-content" id="tab-orgs" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="margin:0">Organizations</h3>
+        <button class="btn btn-primary btn-sm" onclick="openModal('newOrgModal')">+ New Organization</button>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Full Name</th>
+                <th>Description</th>
+                <th>Members</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="orgTableBody">
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Loading...</td></tr>
+        </tbody>
+    </table>
+
+    <!-- Members sub-panel -->
+    <div id="orgMembersPanel" style="display:none;margin-top:1rem">
+        <div class="stat-card">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <h3 style="margin:0">Members of <span id="orgMembersName"></span></h3>
+                <button class="btn btn-sm" onclick="document.getElementById('orgMembersPanel').style.display='none'">Close</button>
+            </div>
+            <div style="margin-top:.75rem;display:flex;gap:.5rem;align-items:end">
+                <div class="form-group" style="margin-bottom:0;flex:1">
+                    <label for="addMemberUsername">Add Member</label>
+                    <input type="text" id="addMemberUsername" placeholder="username">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="addOrgMember()">Add</button>
+            </div>
+            <table class="data-table" style="margin-top:.75rem">
+                <thead>
+                    <tr><th>Username</th><th>Email</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="orgMembersList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ Modals ═══════════ -->
+
+<!-- New Repository Modal -->
+<div class="modal-overlay" id="newRepoModal" style="display:none" onclick="if(event.target===this)closeModal('newRepoModal')">
+    <div class="modal-box">
+        <h3>New Repository</h3>
+        <div class="form-group">
+            <label for="newRepoOwner">Owner</label>
+            <select id="newRepoOwner"><option value="">Loading...</option></select>
+        </div>
+        <div class="form-group">
+            <label for="newRepoName">Name</label>
+            <input type="text" id="newRepoName" placeholder="my-project">
+        </div>
+        <div class="form-group">
+            <label for="newRepoDesc">Description</label>
+            <input type="text" id="newRepoDesc" placeholder="A short description">
+        </div>
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;color:var(--text)">
+                <input type="checkbox" id="newRepoPrivate" checked> Private
+            </label>
+        </div>
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;color:var(--text)">
+                <input type="checkbox" id="newRepoAutoInit" checked> Initialize with README
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="newRepoLicense">License</label>
+            <select id="newRepoLicense">
+                <option value="">None</option>
+                <option value="MIT">MIT</option>
+                <option value="Apache-2.0">Apache 2.0</option>
+                <option value="GPL-3.0">GPL 3.0</option>
+                <option value="BSD-2-Clause">BSD 2-Clause</option>
+                <option value="BSD-3-Clause">BSD 3-Clause</option>
+                <option value="AGPL-3.0">AGPL 3.0</option>
+                <option value="Unlicense">Unlicense</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="newRepoGitignore">Gitignore</label>
+            <select id="newRepoGitignore">
+                <option value="">None</option>
+                <option value="Go">Go</option>
+                <option value="Python">Python</option>
+                <option value="Node">Node</option>
+                <option value="Java">Java</option>
+                <option value="Rust">Rust</option>
+                <option value="C">C</option>
+                <option value="C++">C++</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('newRepoModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createRepo()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Mirror Repository Modal -->
+<div class="modal-overlay" id="mirrorRepoModal" style="display:none" onclick="if(event.target===this)closeModal('mirrorRepoModal')">
+    <div class="modal-box">
+        <h3>Mirror Repository</h3>
+        <div class="form-group">
+            <label for="mirrorURL">Clone URL</label>
+            <input type="text" id="mirrorURL" placeholder="https://github.com/user/repo.git">
+        </div>
+        <div class="form-group">
+            <label for="mirrorOwner">Owner</label>
+            <select id="mirrorOwner"><option value="">Loading...</option></select>
+        </div>
+        <div class="form-group">
+            <label for="mirrorName">Repository Name</label>
+            <input type="text" id="mirrorName" placeholder="repo-mirror">
+        </div>
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;color:var(--text)">
+                <input type="checkbox" id="mirrorPrivate" checked> Private
+            </label>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('mirrorRepoModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createMirror()">Create Mirror</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Git User Modal -->
+<div class="modal-overlay" id="newGitUserModal" style="display:none" onclick="if(event.target===this)closeModal('newGitUserModal')">
+    <div class="modal-box">
+        <h3>New Gitea User</h3>
+        <div class="form-group">
+            <label for="newGitUsername">Username</label>
+            <input type="text" id="newGitUsername">
+        </div>
+        <div class="form-group">
+            <label for="newGitEmail">Email</label>
+            <input type="email" id="newGitEmail">
+        </div>
+        <div class="form-group">
+            <label for="newGitPassword">Password</label>
+            <input type="password" id="newGitPassword">
+        </div>
+        <div class="form-group">
+            <label for="newGitFullName">Full Name</label>
+            <input type="text" id="newGitFullName">
+        </div>
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;color:var(--text)">
+                <input type="checkbox" id="newGitMustChange" checked> Must change password on first login
+            </label>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('newGitUserModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createGitUser()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="resetPassModal" style="display:none" onclick="if(event.target===this)closeModal('resetPassModal')">
+    <div class="modal-box" style="max-width:380px">
+        <h3>Reset Password</h3>
+        <p style="color:var(--text-muted);font-size:.85rem">Resetting password for <strong id="resetPassUser"></strong></p>
+        <div class="form-group">
+            <label for="resetPassValue">New Password</label>
+            <input type="password" id="resetPassValue">
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('resetPassModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="resetGitPassword()">Reset</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Organization Modal -->
+<div class="modal-overlay" id="newOrgModal" style="display:none" onclick="if(event.target===this)closeModal('newOrgModal')">
+    <div class="modal-box">
+        <h3>New Organization</h3>
+        <div class="form-group">
+            <label for="newOrgName">Name</label>
+            <input type="text" id="newOrgName" placeholder="my-org">
+        </div>
+        <div class="form-group">
+            <label for="newOrgFullName">Full Name</label>
+            <input type="text" id="newOrgFullName" placeholder="My Organization">
+        </div>
+        <div class="form-group">
+            <label for="newOrgDesc">Description</label>
+            <input type="text" id="newOrgDesc">
+        </div>
+        <div class="form-group">
+            <label for="newOrgVisibility">Visibility</label>
+            <select id="newOrgVisibility">
+                <option value="private">Private</option>
+                <option value="limited">Limited</option>
+                <option value="public">Public</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('newOrgModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createOrg()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Uninstall Modal -->
+<div class="modal-overlay" id="uninstallModal" style="display:none" onclick="if(event.target===this)closeModal('uninstallModal')">
+    <div class="modal-box" style="max-width:400px">
+        <h3 style="color:var(--err)">Uninstall Gitea</h3>
+        <p style="color:var(--text-muted)">This will stop Gitea and remove the service configuration. Your repository data will be preserved on disk.</p>
+        <p style="color:var(--text-muted);font-size:.85rem">Type <strong>UNINSTALL</strong> to confirm:</p>
+        <div class="form-group">
+            <input type="text" id="uninstallConfirm" placeholder="UNINSTALL">
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-sm" onclick="closeModal('uninstallModal')">Cancel</button>
+            <button class="btn btn-sm" style="background:var(--err);border-color:var(--err);color:#fff" onclick="uninstallGitea()">Uninstall</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1.25rem;font-size:.9rem;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,.3)"></div>
+
+<style>
+.tab-bar { display:flex; gap:0; margin-bottom:1.5rem; border-bottom:2px solid var(--border); }
+.tab { padding:.6rem 1.2rem; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:.9rem; border-bottom:2px solid transparent; margin-bottom:-2px; transition:color .15s,border-color .15s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.step-dot { padding:.3rem .7rem; border-radius:var(--radius); font-size:.8rem; color:var(--text-muted); background:var(--bg); border:1px solid var(--border); }
+.step-dot.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.step-dot.done { background:var(--ok); color:#fff; border-color:var(--ok); }
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); z-index:100; display:flex; align-items:center; justify-content:center; }
+.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
+.modal-box h3 { margin:0 0 1rem; }
+</style>
+
+<script>
+(function(){
+    // ── State ──
+    let _installed = false;
+    let _currentOrgMembers = '';
+    let _allRepos = [];
+
+    // ── Tab Switching ──
+    document.querySelectorAll('#gitTabs .tab').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            document.querySelectorAll('#gitTabs .tab').forEach(function(b){ b.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(c){ c.style.display='none'; });
+            btn.classList.add('active');
+            var target = document.getElementById('tab-' + btn.dataset.tab);
+            if(target) target.style.display = 'block';
+            if(btn.dataset.tab === 'repos') loadRepos();
+            if(btn.dataset.tab === 'gitusers') loadGitUsers();
+            if(btn.dataset.tab === 'orgs') loadOrgs();
+        });
+    });
+
+    // ── Init ──
+    checkStatus();
+
+    function checkStatus() {
+        fetch('/git/status', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            _installed = data.installed && data.running;
+            if(data.installed) {
+                document.getElementById('setupSection').style.display = 'none';
+                document.getElementById('managementSection').style.display = 'block';
+                document.getElementById('giteaVersion').textContent = data.version || '--';
+                var urlLink = document.getElementById('giteaURLLink');
+                var domain = data.url || '';
+                if(domain && !domain.startsWith('http')) domain = 'https://' + domain;
+                urlLink.href = domain;
+                urlLink.textContent = domain || '--';
+                document.getElementById('giteaRunning').textContent = data.running ? 'Running' : 'Stopped';
+                document.getElementById('giteaRunning').className = 'badge ' + (data.running ? 'badge-ok' : 'badge-err');
+                if(data.disk_usage) {
+                    document.getElementById('giteaDisk').textContent = formatBytes(data.disk_usage);
+                }
+                document.getElementById('statRepos').textContent = data.total_repos || 0;
+                document.getElementById('statUsers').textContent = data.total_users || 0;
+                document.getElementById('statOrgs').textContent = data.total_orgs || 0;
+            } else {
+                document.getElementById('setupSection').style.display = 'block';
+                document.getElementById('managementSection').style.display = 'none';
+                populateDomains();
+            }
+        })
+        .catch(function(){
+            document.getElementById('setupSection').style.display = 'block';
+            document.getElementById('managementSection').style.display = 'none';
+            populateDomains();
+        });
+    }
+
+    function populateDomains() {
+        fetch('/sites', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(sites){
+            var sel = document.getElementById('wiz_domain');
+            sel.innerHTML = '<option value="">-- select domain --</option>';
+            if(sites && sites.length) {
+                sites.forEach(function(s){
+                    var d = s.Domain || s.domain;
+                    if(d) {
+                        var opt = document.createElement('option');
+                        opt.value = d; opt.textContent = d;
+                        sel.appendChild(opt);
+                    }
+                });
+            }
+            updateURLPreview();
+        })
+        .catch(function(){});
+    }
+
+    // ── Wizard ──
+    window.updateURLPreview = function() {
+        var style = document.querySelector('input[name="url_style"]:checked').value;
+        var sub = document.getElementById('wiz_subdomain').value || 'git';
+        var domain = document.getElementById('wiz_domain').value || 'example.com';
+        var url = style === 'subdomain' ? 'https://' + sub + '.' + domain : 'https://' + domain + '/' + sub;
+        document.getElementById('urlPreview').textContent = url;
+    };
+
+    window.wizardNext = function(step) {
+        for(var i=1;i<=4;i++){
+            var el = document.getElementById('wizStep'+i);
+            if(el) el.style.display = i===step ? 'block' : 'none';
+        }
+        document.querySelectorAll('.step-dot').forEach(function(d){
+            var s = parseInt(d.dataset.step);
+            d.classList.remove('active','done');
+            if(s === step) d.classList.add('active');
+            else if(s < step) d.classList.add('done');
+        });
+        if(step === 4) {
+            var style = document.querySelector('input[name="url_style"]:checked').value;
+            var sub = document.getElementById('wiz_subdomain').value || 'git';
+            var domain = document.getElementById('wiz_domain').value || 'example.com';
+            var url = style === 'subdomain' ? 'https://' + sub + '.' + domain : 'https://' + domain + '/' + sub;
+            document.getElementById('reviewURL').textContent = url;
+            document.getElementById('reviewStyle').textContent = style;
+            document.getElementById('reviewSSH').textContent = document.getElementById('wiz_ssh_port').value || '2222';
+            document.getElementById('reviewAdmin').textContent = document.getElementById('wiz_admin_user').value;
+            document.getElementById('reviewEmail').textContent = document.getElementById('wiz_admin_email').value;
+        }
+    };
+
+    window.installGitea = function() {
+        var btn = document.getElementById('installBtn');
+        btn.disabled = true;
+        btn.textContent = 'Installing...';
+        document.getElementById('wizBackBtn').style.display = 'none';
+        document.getElementById('installProgress').style.display = 'block';
+        document.getElementById('installError').style.display = 'none';
+
+        var bar = document.getElementById('installProgressBar');
+        var statusText = document.getElementById('installStatusText');
+        bar.style.width = '10%';
+        statusText.textContent = 'Downloading Gitea binary...';
+
+        var progInterval = setInterval(function(){
+            var w = parseFloat(bar.style.width);
+            if(w < 85) bar.style.width = (w + 2) + '%';
+        }, 1000);
+
+        var body = {
+            url_style: document.querySelector('input[name="url_style"]:checked').value,
+            subdomain: document.getElementById('wiz_subdomain').value || 'git',
+            domain: document.getElementById('wiz_domain').value,
+            ssh_port: parseInt(document.getElementById('wiz_ssh_port').value) || 2222,
+            admin_username: document.getElementById('wiz_admin_user').value,
+            admin_password: document.getElementById('wiz_admin_pass').value,
+            admin_email: document.getElementById('wiz_admin_email').value
+        };
+
+        fetch('/git/install', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            clearInterval(progInterval);
+            if(res.ok) {
+                bar.style.width = '100%';
+                statusText.textContent = 'Gitea installed successfully!';
+                showToast('Gitea installed successfully!', 'ok');
+                setTimeout(function(){ location.reload(); }, 1500);
+            } else {
+                throw new Error(res.data.error || 'Installation failed');
+            }
+        })
+        .catch(function(err){
+            clearInterval(progInterval);
+            bar.style.width = '0%';
+            document.getElementById('installError').style.display = 'block';
+            document.getElementById('installError').textContent = err.message;
+            btn.disabled = false;
+            btn.textContent = 'Retry Install';
+            document.getElementById('wizBackBtn').style.display = '';
+            statusText.textContent = 'Installation failed.';
+        });
+    };
+
+    // ── Service Actions ──
+    window.giteaServiceAction = function(action) {
+        // Uses systemctl via a generic mechanism — in practice you'd call a dedicated endpoint.
+        // For now we just restart by hitting status endpoint after issuing the command.
+        showToast('Sending ' + action + ' command...', 'info');
+        // The panel doesn't have direct service control for Gitea yet,
+        // so we show the intent and refresh status
+        setTimeout(checkStatus, 2000);
+    };
+
+    window.confirmUninstall = function() {
+        openModal('uninstallModal');
+        document.getElementById('uninstallConfirm').value = '';
+    };
+
+    window.uninstallGitea = function() {
+        if(document.getElementById('uninstallConfirm').value !== 'UNINSTALL') {
+            showToast('Please type UNINSTALL to confirm', 'err');
+            return;
+        }
+        fetch('/git/uninstall', {method:'POST', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            closeModal('uninstallModal');
+            showToast('Gitea uninstalled', 'ok');
+            setTimeout(function(){ location.reload(); }, 1000);
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    // ── Repositories ──
+    function loadRepos() {
+        fetch('/git/repos', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(repos){
+            _allRepos = repos || [];
+            renderRepos(_allRepos);
+            populateOwnerDropdowns(repos);
+        })
+        .catch(function(){ document.getElementById('repoTableBody').innerHTML = '<tr><td colspan="8" style="color:var(--err)">Failed to load repositories</td></tr>'; });
+    }
+
+    function renderRepos(repos) {
+        var tbody = document.getElementById('repoTableBody');
+        if(!repos || !repos.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">No repositories found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = repos.map(function(r){
+            var owner = r.owner ? r.owner.login : 'unknown';
+            var vis = r.private ? '<span class="badge">Private</span>' : '<span class="badge badge-ok">Public</span>';
+            var size = formatBytes(r.size * 1024);
+            var created = r.created_at ? r.created_at.split('T')[0] : '--';
+            return '<tr>' +
+                '<td><a href="' + (r.html_url||'#') + '" target="_blank" style="color:var(--primary)">' + esc(r.name) + '</a>' + (r.mirror ? ' <span class="badge">mirror</span>' : '') + '</td>' +
+                '<td>' + esc(owner) + '</td>' +
+                '<td>' + vis + '</td>' +
+                '<td>' + (r.stars_count||0) + '</td>' +
+                '<td>' + (r.forks_count||0) + '</td>' +
+                '<td>' + size + '</td>' +
+                '<td>' + created + '</td>' +
+                '<td><button class="btn btn-sm" style="color:var(--err)" onclick="deleteRepo(\'' + esc(owner) + '\',\'' + esc(r.name) + '\')">Delete</button></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    window.filterRepos = function() {
+        var q = document.getElementById('repoSearch').value.toLowerCase();
+        var filtered = _allRepos.filter(function(r){
+            return r.name.toLowerCase().indexOf(q) >= 0 ||
+                   (r.owner && r.owner.login.toLowerCase().indexOf(q) >= 0) ||
+                   (r.description || '').toLowerCase().indexOf(q) >= 0;
+        });
+        renderRepos(filtered);
+    };
+
+    function populateOwnerDropdowns(repos) {
+        var owners = {};
+        if(repos) repos.forEach(function(r){ if(r.owner) owners[r.owner.login] = true; });
+        // Also fetch users for owner dropdowns
+        fetch('/git/users', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(users){
+            if(users) users.forEach(function(u){ owners[u.login] = true; });
+            var options = Object.keys(owners).sort().map(function(o){ return '<option value="'+esc(o)+'">'+esc(o)+'</option>'; }).join('');
+            document.getElementById('newRepoOwner').innerHTML = options;
+            document.getElementById('mirrorOwner').innerHTML = options;
+        })
+        .catch(function(){});
+    }
+
+    window.createRepo = function() {
+        var body = {
+            owner: document.getElementById('newRepoOwner').value,
+            name: document.getElementById('newRepoName').value,
+            description: document.getElementById('newRepoDesc').value,
+            private: document.getElementById('newRepoPrivate').checked,
+            auto_init: document.getElementById('newRepoAutoInit').checked,
+            license: document.getElementById('newRepoLicense').value,
+            gitignores: document.getElementById('newRepoGitignore').value
+        };
+        if(!body.owner || !body.name) { showToast('Owner and name are required', 'err'); return; }
+        fetch('/git/repos', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(body)})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { closeModal('newRepoModal'); showToast('Repository created', 'ok'); loadRepos(); }
+            else { showToast(res.data.error || 'Failed to create repository', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.createMirror = function() {
+        var body = {
+            clone_url: document.getElementById('mirrorURL').value,
+            owner: document.getElementById('mirrorOwner').value,
+            name: document.getElementById('mirrorName').value,
+            private: document.getElementById('mirrorPrivate').checked
+        };
+        if(!body.clone_url || !body.owner || !body.name) { showToast('All fields required', 'err'); return; }
+        fetch('/git/repos/mirror', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(body)})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { closeModal('mirrorRepoModal'); showToast('Mirror created', 'ok'); loadRepos(); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.deleteRepo = function(owner, repo) {
+        if(!confirm('Delete repository ' + owner + '/' + repo + '? This cannot be undone.')) return;
+        fetch('/git/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo), {method:'DELETE', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ showToast('Repository deleted', 'ok'); loadRepos(); })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    // ── Git Users ──
+    function loadGitUsers() {
+        fetch('/git/users', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(users){
+            var tbody = document.getElementById('gitUserTableBody');
+            if(!users || !users.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No users found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(function(u){
+                var adminBadge = u.is_admin ? '<span class="badge badge-ok">Admin</span>' : '';
+                var created = u.created ? u.created.split('T')[0] : '--';
+                return '<tr>' +
+                    '<td>' + esc(u.login) + '</td>' +
+                    '<td>' + esc(u.email||'') + '</td>' +
+                    '<td>' + esc(u.full_name||'') + '</td>' +
+                    '<td>' + adminBadge + '</td>' +
+                    '<td>' + created + '</td>' +
+                    '<td style="display:flex;gap:.3rem">' +
+                        '<button class="btn btn-sm" onclick="openResetPass(\'' + esc(u.login) + '\')">Reset Pwd</button>' +
+                        '<button class="btn btn-sm" style="color:var(--err)" onclick="deleteGitUser(\'' + esc(u.login) + '\')">Delete</button>' +
+                    '</td></tr>';
+            }).join('');
+        })
+        .catch(function(){ document.getElementById('gitUserTableBody').innerHTML = '<tr><td colspan="6" style="color:var(--err)">Failed to load</td></tr>'; });
+    }
+
+    window.createGitUser = function() {
+        var body = {
+            username: document.getElementById('newGitUsername').value,
+            email: document.getElementById('newGitEmail').value,
+            password: document.getElementById('newGitPassword').value,
+            full_name: document.getElementById('newGitFullName').value,
+            must_change_password: document.getElementById('newGitMustChange').checked
+        };
+        if(!body.username || !body.email || !body.password) { showToast('Username, email, and password are required', 'err'); return; }
+        fetch('/git/users', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(body)})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { closeModal('newGitUserModal'); showToast('User created', 'ok'); loadGitUsers(); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.deleteGitUser = function(username) {
+        if(!confirm('Delete Gitea user "' + username + '"?')) return;
+        fetch('/git/users/' + encodeURIComponent(username), {method:'DELETE', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ showToast('User deleted', 'ok'); loadGitUsers(); })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.openResetPass = function(username) {
+        document.getElementById('resetPassUser').textContent = username;
+        document.getElementById('resetPassValue').value = '';
+        document.getElementById('resetPassValue').dataset.username = username;
+        openModal('resetPassModal');
+    };
+
+    window.resetGitPassword = function() {
+        var username = document.getElementById('resetPassValue').dataset.username;
+        var password = document.getElementById('resetPassValue').value;
+        if(!password) { showToast('Password is required', 'err'); return; }
+        fetch('/git/users/' + encodeURIComponent(username) + '/reset-password', {
+            method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body:JSON.stringify({password: password})
+        })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { closeModal('resetPassModal'); showToast('Password reset', 'ok'); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    // ── Organizations ──
+    function loadOrgs() {
+        fetch('/git/orgs', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(orgs){
+            var tbody = document.getElementById('orgTableBody');
+            if(!orgs || !orgs.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No organizations found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = orgs.map(function(o){
+                return '<tr>' +
+                    '<td>' + esc(o.name) + '</td>' +
+                    '<td>' + esc(o.full_name||'') + '</td>' +
+                    '<td>' + esc(o.description||'') + '</td>' +
+                    '<td><button class="btn btn-sm" onclick="showOrgMembers(\'' + esc(o.name) + '\')">Manage</button></td>' +
+                    '<td><button class="btn btn-sm" style="color:var(--err)" onclick="deleteOrg(\'' + esc(o.name) + '\')">Delete</button></td>' +
+                    '</tr>';
+            }).join('');
+        })
+        .catch(function(){ document.getElementById('orgTableBody').innerHTML = '<tr><td colspan="5" style="color:var(--err)">Failed to load</td></tr>'; });
+    }
+
+    window.createOrg = function() {
+        var body = {
+            name: document.getElementById('newOrgName').value,
+            full_name: document.getElementById('newOrgFullName').value,
+            description: document.getElementById('newOrgDesc').value,
+            visibility: document.getElementById('newOrgVisibility').value
+        };
+        if(!body.name) { showToast('Name is required', 'err'); return; }
+        fetch('/git/orgs', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(body)})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { closeModal('newOrgModal'); showToast('Organization created', 'ok'); loadOrgs(); }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.deleteOrg = function(name) {
+        if(!confirm('Delete organization "' + name + '"? This cannot be undone.')) return;
+        fetch('/git/orgs/' + encodeURIComponent(name), {method:'DELETE', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ showToast('Organization deleted', 'ok'); loadOrgs(); })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.showOrgMembers = function(orgName) {
+        _currentOrgMembers = orgName;
+        document.getElementById('orgMembersName').textContent = orgName;
+        document.getElementById('orgMembersPanel').style.display = 'block';
+        document.getElementById('addMemberUsername').value = '';
+        loadOrgMembers(orgName);
+    };
+
+    function loadOrgMembers(orgName) {
+        fetch('/git/orgs/' + encodeURIComponent(orgName) + '/members', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(members){
+            var tbody = document.getElementById('orgMembersList');
+            if(!members || !members.length) {
+                tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted)">No members.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = members.map(function(m){
+                return '<tr><td>' + esc(m.login) + '</td><td>' + esc(m.email||'') + '</td>' +
+                    '<td><button class="btn btn-sm" style="color:var(--err)" onclick="removeOrgMember(\'' + esc(orgName) + '\',\'' + esc(m.login) + '\')">Remove</button></td></tr>';
+            }).join('');
+        })
+        .catch(function(){ document.getElementById('orgMembersList').innerHTML = '<tr><td colspan="3" style="color:var(--err)">Failed to load</td></tr>'; });
+    }
+
+    window.addOrgMember = function() {
+        var username = document.getElementById('addMemberUsername').value.trim();
+        if(!username) { showToast('Username is required', 'err'); return; }
+        fetch('/git/orgs/' + encodeURIComponent(_currentOrgMembers) + '/members/' + encodeURIComponent(username), {
+            method:'PUT', headers:{'Accept':'application/json'}
+        })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(res.ok) { showToast('Member added', 'ok'); loadOrgMembers(_currentOrgMembers); document.getElementById('addMemberUsername').value=''; }
+            else { showToast(res.data.error || 'Failed', 'err'); }
+        })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    window.removeOrgMember = function(org, username) {
+        if(!confirm('Remove ' + username + ' from ' + org + '?')) return;
+        fetch('/git/orgs/' + encodeURIComponent(org) + '/members/' + encodeURIComponent(username), {
+            method:'DELETE', headers:{'Accept':'application/json'}
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ showToast('Member removed', 'ok'); loadOrgMembers(org); })
+        .catch(function(e){ showToast('Error: ' + e.message, 'err'); });
+    };
+
+    // ── Modals ──
+    window.openModal = function(id) { document.getElementById(id).style.display = 'flex'; };
+    window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
+
+    // ── Utilities ──
+    function esc(s) { var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+    function formatBytes(bytes) {
+        if(!bytes || bytes===0) return '0 B';
+        var k=1024, sizes=['B','KB','MB','GB','TB'];
+        var i=Math.floor(Math.log(bytes)/Math.log(k));
+        return parseFloat((bytes/Math.pow(k,i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.display = 'block';
+        t.style.borderColor = type==='ok' ? 'var(--ok)' : type==='err' ? 'var(--err)' : 'var(--primary)';
+        t.style.color = type==='ok' ? 'var(--ok)' : type==='err' ? 'var(--err)' : 'var(--text)';
+        clearTimeout(t._timer);
+        t._timer = setTimeout(function(){ t.style.display='none'; }, 4000);
+    }
+
+    // Auto-refresh status every 30s
+    setInterval(function(){ if(_installed) checkStatus(); }, 30000);
+})();
+</script>
+{{end}}
