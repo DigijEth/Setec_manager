@@ -1,0 +1,1082 @@
+{{define "content"}}
+<div style="display:flex;justify-content:space-between;align-items:center">
+    <h2>Docker Management</h2>
+    <span id="dockerStatusBadge"></span>
+</div>
+
+<!-- Tabs -->
+<div class="tab-bar" id="dockerTabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="deploy" style="color:var(--primary);font-weight:600">One-Click Deploy</button>
+    <button class="tab" data-tab="containers">Containers</button>
+    <button class="tab" data-tab="images">Images</button>
+    <button class="tab" data-tab="volumes">Volumes</button>
+    <button class="tab" data-tab="networks">Networks</button>
+</div>
+
+<!-- ═══════════ Tab 1: Overview ═══════════ -->
+<div class="tab-content active" id="tab-overview">
+    <div id="installSection" style="display:none">
+        <div class="stat-card" style="max-width:640px">
+            <h3 style="margin-top:0">Install Docker</h3>
+            <p style="color:var(--text-muted);margin-bottom:1rem">Docker is not installed on this system. Install Docker CE to manage containers.</p>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+                <p style="color:var(--text);font-weight:600;margin-bottom:.5rem">What will be installed:</p>
+                <ul style="list-style:none;padding:0">
+                    <li style="padding:.25rem 0;color:var(--text-muted)">&#10003; Docker CE (Community Edition)</li>
+                    <li style="padding:.25rem 0;color:var(--text-muted)">&#10003; containerd runtime</li>
+                    <li style="padding:.25rem 0;color:var(--text-muted)">&#10003; Docker Compose plugin</li>
+                    <li style="padding:.25rem 0;color:var(--text-muted)">&#10003; Docker CLI tools</li>
+                </ul>
+            </div>
+            <div id="installProgress" style="display:none;margin-bottom:1rem">
+                <p style="color:var(--text-muted);font-size:.85rem" id="installStatus">Installing Docker...</p>
+                <div class="progress-bar"><div class="progress-fill" id="installBar" style="width:0%"></div></div>
+            </div>
+            <button class="btn btn-primary" id="installBtn" onclick="installDocker()">Install Docker CE</button>
+        </div>
+    </div>
+
+    <div id="dashboardSection" style="display:none">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Docker Version</h3>
+                <div class="big-number" id="dockerVersion" style="font-size:1.4rem">-</div>
+                <p style="color:var(--text-muted);font-size:.8rem" id="dockerAPI"></p>
+            </div>
+            <div class="stat-card">
+                <h3>Containers</h3>
+                <div class="big-number" id="containerCount">-</div>
+                <p style="color:var(--text-muted);font-size:.8rem" id="containerBreakdown"></p>
+            </div>
+            <div class="stat-card">
+                <h3>Images</h3>
+                <div class="big-number" id="imageCount">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>System</h3>
+                <p style="font-size:.85rem;color:var(--text-muted)" id="systemOS">-</p>
+                <p style="font-size:.85rem;color:var(--text-muted)" id="systemArch">-</p>
+                <p style="font-size:.85rem;color:var(--text-muted)" id="systemCPUs">-</p>
+                <p style="font-size:.85rem;color:var(--text-muted)" id="systemMem">-</p>
+            </div>
+        </div>
+
+        <h3>Quick Actions</h3>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem">
+            <button class="btn btn-sm" onclick="pruneDocker()">Prune Unused Resources</button>
+        </div>
+
+        <h3>Disk Usage</h3>
+        <div class="stat-card">
+            <div id="diskUsage" style="margin:0;font-size:.85rem;color:var(--text-muted)">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ Tab 2: One-Click Deploy ═══════════ -->
+<div class="tab-content" id="tab-deploy" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+        <!-- Deploy Form -->
+        <div class="stat-card">
+            <h3 style="margin-top:0;color:var(--primary)">Deploy Application</h3>
+            <div class="form-group">
+                <label for="deployName">App Name</label>
+                <input type="text" id="deployName" placeholder="my-app">
+            </div>
+            <div class="form-group">
+                <label for="deployImage">Docker Image</label>
+                <input type="text" id="deployImage" placeholder="nginx:latest" list="imageSuggestions">
+                <datalist id="imageSuggestions">
+                    <option value="nginx:latest">
+                    <option value="postgres:16">
+                    <option value="redis:alpine">
+                    <option value="mysql:8">
+                    <option value="node:20-alpine">
+                    <option value="python:3.12-slim">
+                    <option value="wordpress:latest">
+                    <option value="ghost:latest">
+                    <option value="gitea/gitea:latest">
+                    <option value="nextcloud:latest">
+                    <option value="grafana/grafana:latest">
+                    <option value="prom/prometheus:latest">
+                </datalist>
+            </div>
+            <div class="form-group">
+                <label for="deployDomain">Domain</label>
+                <div style="display:flex;gap:.5rem">
+                    <input type="text" id="deploySubdomain" placeholder="app" style="width:40%">
+                    <select id="deployDomainSelect" style="width:60%">
+                        <option value="">-- no domain --</option>
+                    </select>
+                </div>
+                <p style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem">Leave blank to skip domain routing</p>
+            </div>
+            <div class="form-group">
+                <label for="deployPort">Internal Port</label>
+                <input type="number" id="deployPort" value="8080" min="1" max="65535" style="width:120px">
+            </div>
+
+            <h3 style="font-size:.95rem">Environment Variables</h3>
+            <div id="envVars"></div>
+            <button class="btn btn-sm" onclick="addEnvVar()" style="margin-bottom:1rem">+ Add Variable</button>
+
+            <h3 style="font-size:.95rem">Volume Mounts</h3>
+            <div id="volumeMounts"></div>
+            <button class="btn btn-sm" onclick="addVolumeMount()" style="margin-bottom:1rem">+ Add Volume</button>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                <div class="form-group">
+                    <label for="deployMemory">Memory Limit</label>
+                    <select id="deployMemory">
+                        <option value="0">No limit</option>
+                        <option value="268435456">256 MB</option>
+                        <option value="536870912" selected>512 MB</option>
+                        <option value="1073741824">1 GB</option>
+                        <option value="2147483648">2 GB</option>
+                        <option value="4294967296">4 GB</option>
+                        <option value="8589934592">8 GB</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="deployCPUs">CPU Limit</label>
+                    <select id="deployCPUs">
+                        <option value="0">No limit</option>
+                        <option value="0.5">0.5 CPUs</option>
+                        <option value="1" selected>1 CPU</option>
+                        <option value="2">2 CPUs</option>
+                        <option value="4">4 CPUs</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="deployRestart">Restart Policy</label>
+                <select id="deployRestart">
+                    <option value="unless-stopped" selected>Unless Stopped</option>
+                    <option value="always">Always</option>
+                    <option value="on-failure">On Failure</option>
+                    <option value="no">Never</option>
+                </select>
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+                <input type="checkbox" id="deploySSL">
+                <label for="deploySSL" style="margin:0;color:var(--text)">Enable SSL (auto-provision via Let's Encrypt)</label>
+            </div>
+            <div class="form-group" id="sslEmailGroup" style="display:none">
+                <label for="deploySSLEmail">SSL Email</label>
+                <input type="email" id="deploySSLEmail" placeholder="admin@example.com">
+            </div>
+
+            <button class="btn btn-primary" style="width:100%;padding:.75rem;font-size:1rem;margin-top:.5rem" onclick="deployApp()">
+                Deploy Application
+            </button>
+            <div id="deployResult" style="display:none;margin-top:1rem"></div>
+        </div>
+
+        <!-- Active Deployments -->
+        <div>
+            <h3 style="margin-top:0">Active Deployments</h3>
+            <div id="deploymentsLoading" style="color:var(--text-muted)">Loading...</div>
+            <table class="data-table" id="deploymentsTable" style="display:none">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Image</th>
+                        <th>Domain</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="deploymentsBody"></tbody>
+            </table>
+            <p id="noDeployments" style="display:none;color:var(--text-muted);font-size:.9rem">No active deployments.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ Tab 3: Containers ═══════════ -->
+<div class="tab-content" id="tab-containers" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <button class="btn btn-sm" onclick="loadContainers()">Refresh</button>
+        <button class="btn btn-primary btn-sm" onclick="showCreateContainerModal()">Create Container</button>
+    </div>
+    <table class="data-table" id="containersTable" style="display:none">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Image</th>
+                <th>Status</th>
+                <th>Ports</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="containersBody"></tbody>
+    </table>
+    <p id="noContainers" style="color:var(--text-muted)">Loading containers...</p>
+</div>
+
+<!-- ═══════════ Tab 4: Images ═══════════ -->
+<div class="tab-content" id="tab-images" style="display:none">
+    <div style="display:flex;gap:.5rem;align-items:end;margin-bottom:1rem">
+        <div class="form-group" style="margin:0;flex:1">
+            <label for="pullImageRef">Pull Image</label>
+            <input type="text" id="pullImageRef" placeholder="nginx:latest">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="pullImage()" style="height:36px">Pull</button>
+        <button class="btn btn-sm" onclick="loadImages()" style="height:36px">Refresh</button>
+    </div>
+    <div id="pullProgress" style="display:none;margin-bottom:1rem">
+        <p style="color:var(--text-muted);font-size:.85rem">Pulling image...</p>
+        <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+    </div>
+    <table class="data-table" id="imagesTable" style="display:none">
+        <thead>
+            <tr>
+                <th>Repository:Tag</th>
+                <th>ID</th>
+                <th>Size</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="imagesBody"></tbody>
+    </table>
+    <p id="noImages" style="color:var(--text-muted)">Loading images...</p>
+</div>
+
+<!-- ═══════════ Tab 5: Volumes ═══════════ -->
+<div class="tab-content" id="tab-volumes" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <button class="btn btn-sm" onclick="loadVolumes()">Refresh</button>
+        <button class="btn btn-primary btn-sm" onclick="showCreateVolumeModal()">Create Volume</button>
+    </div>
+    <table class="data-table" id="volumesTable" style="display:none">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Driver</th>
+                <th>Mountpoint</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="volumesBody"></tbody>
+    </table>
+    <p id="noVolumes" style="color:var(--text-muted)">Loading volumes...</p>
+</div>
+
+<!-- ═══════════ Tab 6: Networks ═══════════ -->
+<div class="tab-content" id="tab-networks" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <button class="btn btn-sm" onclick="loadNetworks()">Refresh</button>
+        <button class="btn btn-primary btn-sm" onclick="showCreateNetworkModal()">Create Network</button>
+    </div>
+    <table class="data-table" id="networksTable" style="display:none">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>ID</th>
+                <th>Driver</th>
+                <th>Scope</th>
+                <th>Subnet</th>
+                <th>Gateway</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="networksBody"></tbody>
+    </table>
+    <p id="noNetworks" style="color:var(--text-muted)">Loading networks...</p>
+</div>
+
+<!-- ═══════════ Modal Overlay ═══════════ -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;position:relative">
+        <button onclick="closeModal()" style="position:absolute;top:.75rem;right:.75rem;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem">&times;</button>
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<style>
+.tab-bar { display:flex; gap:0; margin-bottom:1.5rem; border-bottom:2px solid var(--border); }
+.tab { padding:.6rem 1.2rem; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:.9rem; border-bottom:2px solid transparent; margin-bottom:-2px; transition:color .15s,border-color .15s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.badge-running { background:rgba(34,197,94,.15); color:var(--ok); display:inline-block; padding:.15rem .5rem; font-size:.75rem; font-weight:600; border-radius:999px; }
+.badge-exited { background:rgba(239,68,68,.15); color:var(--err); display:inline-block; padding:.15rem .5rem; font-size:.75rem; font-weight:600; border-radius:999px; }
+.badge-paused { background:rgba(245,158,11,.15); color:var(--warn); display:inline-block; padding:.15rem .5rem; font-size:.75rem; font-weight:600; border-radius:999px; }
+.badge-created { background:rgba(99,102,241,.15); color:var(--primary); display:inline-block; padding:.15rem .5rem; font-size:.75rem; font-weight:600; border-radius:999px; }
+.env-row, .vol-row { display:flex; gap:.5rem; margin-bottom:.4rem; align-items:center; }
+.env-row input, .vol-row input { flex:1; padding:.35rem .5rem; font-size:.85rem; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); color:var(--text); }
+.env-row button, .vol-row button { background:none; border:none; color:var(--err); cursor:pointer; font-size:1rem; padding:.2rem .4rem; }
+.log-output { background:#0d1117; color:#c9d1d9; font-family:monospace; font-size:.8rem; padding:1rem; border-radius:var(--radius); max-height:400px; overflow-y:auto; white-space:pre-wrap; word-break:break-all; }
+</style>
+
+<script>
+(function(){
+    // ── Data from server ──
+    var DATA = {{.Data}};
+    var installed = DATA && DATA.Installed;
+    var domains = (DATA && DATA.Domains) || [];
+    var deployments = (DATA && DATA.Deployments) || [];
+
+    // ── Helpers ──
+    function humanBytes(b) {
+        if (!b || b === 0) return '0 B';
+        var units = ['B','KB','MB','GB','TB'];
+        var i = 0;
+        while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+        return b.toFixed(1) + ' ' + units[i];
+    }
+
+    function shortID(id) {
+        return id ? id.substring(0, 12) : '-';
+    }
+
+    function timeAgo(ts) {
+        if (!ts) return '-';
+        var d;
+        if (typeof ts === 'number') {
+            d = new Date(ts * 1000);
+        } else {
+            d = new Date(ts);
+        }
+        var sec = Math.floor((Date.now() - d.getTime()) / 1000);
+        if (sec < 60) return sec + 's ago';
+        if (sec < 3600) return Math.floor(sec/60) + 'm ago';
+        if (sec < 86400) return Math.floor(sec/3600) + 'h ago';
+        return Math.floor(sec/86400) + 'd ago';
+    }
+
+    function formatPorts(ports) {
+        if (!ports || !ports.length) return '-';
+        return ports.map(function(p) {
+            if (p.PublicPort) return p.PublicPort + ':' + p.PrivatePort + '/' + p.Type;
+            return p.PrivatePort + '/' + p.Type;
+        }).join(', ');
+    }
+
+    function containerName(names) {
+        if (!names || !names.length) return '-';
+        return names[0].replace(/^\//, '');
+    }
+
+    function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    // ── Tab switching ──
+    document.querySelectorAll('#dockerTabs .tab').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            document.querySelectorAll('#dockerTabs .tab').forEach(function(b){ b.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(c){ c.style.display='none'; });
+            btn.classList.add('active');
+            var target = document.getElementById('tab-' + btn.dataset.tab);
+            if(target) target.style.display='block';
+            if(btn.dataset.tab === 'deploy') loadDeployments();
+            if(btn.dataset.tab === 'containers') loadContainers();
+            if(btn.dataset.tab === 'images') loadImages();
+            if(btn.dataset.tab === 'volumes') loadVolumes();
+            if(btn.dataset.tab === 'networks') loadNetworks();
+        });
+    });
+
+    // ── Init ──
+    if(installed){
+        document.getElementById('dashboardSection').style.display='block';
+        document.getElementById('installSection').style.display='none';
+        loadDashboard();
+    } else {
+        document.getElementById('installSection').style.display='block';
+        document.getElementById('dashboardSection').style.display='none';
+    }
+
+    // Populate domain dropdown
+    var domSel = document.getElementById('deployDomainSelect');
+    domains.forEach(function(d){
+        var opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        domSel.appendChild(opt);
+    });
+
+    // SSL toggle
+    document.getElementById('deploySSL').addEventListener('change', function(){
+        document.getElementById('sslEmailGroup').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // ── Dashboard ──
+    window.loadDashboard = function(){
+        fetch('/docker/status', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ return; }
+            var info = data.info || {};
+            var ver = data.version || {};
+            document.getElementById('dockerVersion').textContent = info.ServerVersion || ver.Version || 'Unknown';
+            document.getElementById('dockerAPI').textContent = 'API: ' + (ver.ApiVersion || '-');
+            document.getElementById('containerCount').textContent = info.Containers || 0;
+            document.getElementById('containerBreakdown').textContent =
+                (info.ContainersRunning||0) + ' running, ' +
+                (info.ContainersStopped||0) + ' stopped, ' +
+                (info.ContainersPaused||0) + ' paused';
+            document.getElementById('imageCount').textContent = info.Images || 0;
+            document.getElementById('systemOS').textContent = 'OS: ' + (info.OperatingSystem || '-');
+            document.getElementById('systemArch').textContent = 'Arch: ' + (info.Architecture || '-');
+            document.getElementById('systemCPUs').textContent = 'CPUs: ' + (info.NCPU || '-');
+            var memGB = info.MemTotal ? (info.MemTotal / 1073741824).toFixed(1) + ' GB' : '-';
+            document.getElementById('systemMem').textContent = 'Memory: ' + memGB;
+            document.getElementById('dockerStatusBadge').innerHTML = '<span class="badge badge-ok">Running</span>';
+
+            // Disk usage
+            var du = data.disk_usage;
+            if(du){
+                var html = '<table class="data-table"><thead><tr><th>Type</th><th>Total</th><th>Active</th><th>Size</th></tr></thead><tbody>';
+                html += '<tr><td>Images</td><td>'+(du.Images?du.Images.length:0)+'</td><td>-</td><td>'+humanBytes(du.LayersSize)+'</td></tr>';
+                html += '<tr><td>Containers</td><td>'+(du.Containers?du.Containers.length:0)+'</td><td>-</td><td>-</td></tr>';
+                html += '<tr><td>Volumes</td><td>'+(du.Volumes?du.Volumes.length:0)+'</td><td>-</td><td>-</td></tr>';
+                html += '</tbody></table>';
+                document.getElementById('diskUsage').innerHTML = html;
+            }
+        })
+        .catch(function(e){
+            document.getElementById('dockerStatusBadge').innerHTML = '<span class="badge badge-err">Error</span>';
+        });
+    };
+
+    // ── Install ──
+    window.installDocker = function(){
+        var btn = document.getElementById('installBtn');
+        btn.disabled = true;
+        btn.textContent = 'Installing...';
+        document.getElementById('installProgress').style.display = 'block';
+        document.getElementById('installStatus').textContent = 'Downloading and installing Docker CE...';
+
+        var bar = document.getElementById('installBar');
+        var pct = 0;
+        var interval = setInterval(function(){
+            pct += 2;
+            if(pct > 90) pct = 90;
+            bar.style.width = pct + '%';
+        }, 1000);
+
+        fetch('/docker/install', {method:'POST', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            clearInterval(interval);
+            bar.style.width = '100%';
+            if(data.error){
+                document.getElementById('installStatus').textContent = 'Error: ' + data.error;
+                document.getElementById('installStatus').style.color = 'var(--err)';
+                btn.disabled = false;
+                btn.textContent = 'Retry Install';
+            } else {
+                document.getElementById('installStatus').textContent = 'Docker installed successfully!';
+                document.getElementById('installStatus').style.color = 'var(--ok)';
+                installed = true;
+                setTimeout(function(){
+                    document.getElementById('installSection').style.display = 'none';
+                    document.getElementById('dashboardSection').style.display = 'block';
+                    loadDashboard();
+                }, 1500);
+            }
+        })
+        .catch(function(e){
+            clearInterval(interval);
+            document.getElementById('installStatus').textContent = 'Error: ' + e.message;
+            document.getElementById('installStatus').style.color = 'var(--err)';
+            btn.disabled = false;
+            btn.textContent = 'Retry Install';
+        });
+    };
+
+    // ── Prune ──
+    window.pruneDocker = function(){
+        if(!confirm('Remove all unused containers, images, volumes, and networks?')) return;
+        fetch('/docker/prune', {method:'POST', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            alert('Prune complete.\n' + (data.output || ''));
+            loadDashboard();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    // ── Deploy ──
+    window.addEnvVar = function(){
+        var div = document.getElementById('envVars');
+        var row = document.createElement('div');
+        row.className = 'env-row';
+        row.innerHTML = '<input type="text" placeholder="KEY"><input type="text" placeholder="value"><button onclick="this.parentElement.remove()">&times;</button>';
+        div.appendChild(row);
+    };
+
+    window.addVolumeMount = function(){
+        var div = document.getElementById('volumeMounts');
+        var row = document.createElement('div');
+        row.className = 'vol-row';
+        row.innerHTML = '<input type="text" placeholder="/host/path"><input type="text" placeholder="/container/path"><button onclick="this.parentElement.remove()">&times;</button>';
+        div.appendChild(row);
+    };
+
+    window.deployApp = function(){
+        var name = document.getElementById('deployName').value.trim();
+        var image = document.getElementById('deployImage').value.trim();
+        if(!name || !image){ alert('Name and image are required'); return; }
+
+        var subdomain = document.getElementById('deploySubdomain').value.trim();
+        var domainBase = document.getElementById('deployDomainSelect').value;
+        var domain = '';
+        if(domainBase){
+            domain = subdomain ? subdomain + '.' + domainBase : domainBase;
+        }
+
+        var env = {};
+        document.querySelectorAll('#envVars .env-row').forEach(function(row){
+            var inputs = row.querySelectorAll('input');
+            var k = inputs[0].value.trim();
+            var v = inputs[1].value;
+            if(k) env[k] = v;
+        });
+
+        var volumes = {};
+        document.querySelectorAll('#volumeMounts .vol-row').forEach(function(row){
+            var inputs = row.querySelectorAll('input');
+            var h = inputs[0].value.trim();
+            var c = inputs[1].value.trim();
+            if(h && c) volumes[h] = c;
+        });
+
+        var body = {
+            name: name,
+            image: image,
+            domain: domain,
+            port: parseInt(document.getElementById('deployPort').value) || 8080,
+            env: env,
+            volumes: volumes,
+            memory: parseInt(document.getElementById('deployMemory').value) || 0,
+            cpus: parseFloat(document.getElementById('deployCPUs').value) || 0,
+            restart: document.getElementById('deployRestart').value,
+            ssl: document.getElementById('deploySSL').checked,
+            ssl_email: document.getElementById('deploySSLEmail').value.trim()
+        };
+
+        var result = document.getElementById('deployResult');
+        result.style.display = 'block';
+        result.innerHTML = '<p style="color:var(--text-muted)">Deploying...</p>';
+
+        fetch('/docker/deploy', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){
+                result.innerHTML = '<div class="error-msg">' + esc(data.error) + '</div>';
+            } else {
+                var domainLink = data.url ? ' <a href="'+esc(data.url)+'" target="_blank" style="color:var(--ok)">'+esc(data.domain)+'</a>' : '';
+                result.innerHTML = '<div style="padding:.5rem .75rem;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:var(--radius);color:var(--ok);font-size:.85rem">' +
+                    'Deployed <strong>' + esc(data.name) + '</strong> successfully!' + domainLink +
+                    ' (Port: ' + data.host_port + ')' +
+                    '</div>';
+                loadDeployments();
+                document.getElementById('deployName').value = '';
+                document.getElementById('deployImage').value = '';
+                document.getElementById('envVars').innerHTML = '';
+                document.getElementById('volumeMounts').innerHTML = '';
+            }
+        })
+        .catch(function(e){
+            result.innerHTML = '<div class="error-msg">' + esc(e.message) + '</div>';
+        });
+    };
+
+    window.loadDeployments = function(){
+        fetch('/docker/deployments', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            document.getElementById('deploymentsLoading').style.display = 'none';
+            if(!data || !Array.isArray(data) || data.length === 0){
+                document.getElementById('deploymentsTable').style.display = 'none';
+                document.getElementById('noDeployments').style.display = 'block';
+                return;
+            }
+            document.getElementById('noDeployments').style.display = 'none';
+            document.getElementById('deploymentsTable').style.display = 'table';
+            var body = document.getElementById('deploymentsBody');
+            body.innerHTML = '';
+            data.forEach(function(dep){
+                var statusClass = dep.status === 'running' ? 'badge-running' :
+                                  dep.status === 'exited' ? 'badge-exited' : 'badge-paused';
+                var domainLink = dep.url ? '<a href="'+esc(dep.url)+'" target="_blank">'+esc(dep.domain)+'</a>' : (dep.domain || '-');
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td>'+esc(dep.name)+'</td>' +
+                    '<td style="font-size:.85rem">'+esc(dep.image)+'</td>' +
+                    '<td>'+domainLink+'</td>' +
+                    '<td><span class="'+statusClass+'">'+esc(dep.status)+'</span></td>' +
+                    '<td style="white-space:nowrap">' +
+                    '<button class="btn btn-sm" onclick="updateDeployment(\''+esc(dep.name)+'\')">Update</button> ' +
+                    '<button class="btn btn-sm" onclick="scaleDeployment(\''+esc(dep.name)+'\','+(dep.replicas||1)+')">Scale</button> ' +
+                    '<button class="btn btn-sm" style="color:var(--err)" onclick="undeployApp(\''+esc(dep.name)+'\')">Undeploy</button>' +
+                    '</td>';
+                body.appendChild(tr);
+            });
+        })
+        .catch(function(e){
+            document.getElementById('deploymentsLoading').textContent = 'Error loading deployments';
+        });
+    };
+
+    window.updateDeployment = function(name){
+        if(!confirm('Pull latest image and recreate container for "'+name+'"?')) return;
+        fetch('/docker/deployments/'+encodeURIComponent(name)+'/update', {method:'POST', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            alert('Deployment "'+name+'" updated successfully');
+            loadDeployments();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    window.scaleDeployment = function(name, current){
+        openModal('<h3 style="margin-top:0">Scale: '+esc(name)+'</h3>' +
+            '<div class="form-group"><label>Replicas</label>' +
+            '<input type="number" id="scaleCount" value="'+(current||1)+'" min="1" max="20">' +
+            '</div>' +
+            '<button class="btn btn-primary" onclick="doScale(\''+esc(name)+'\')">Scale</button>');
+    };
+
+    window.doScale = function(name){
+        var count = parseInt(document.getElementById('scaleCount').value);
+        if(!count || count < 1){ alert('Replicas must be >= 1'); return; }
+        fetch('/docker/deployments/'+encodeURIComponent(name)+'/scale', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({replicas: count})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            closeModal();
+            loadDeployments();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    window.undeployApp = function(name){
+        if(!confirm('Remove deployment "'+name+'" and its container(s)?')) return;
+        fetch('/docker/deployments/'+encodeURIComponent(name), {method:'DELETE', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            loadDeployments();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    // Load deployments on init if we have data
+    if(installed && deployments && deployments.length > 0){
+        setTimeout(loadDeployments, 100);
+    }
+
+    // ── Containers ──
+    window.loadContainers = function(){
+        fetch('/docker/containers', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(!data || data.error || !Array.isArray(data) || data.length === 0){
+                document.getElementById('containersTable').style.display = 'none';
+                document.getElementById('noContainers').textContent = data && data.error ? 'Error: '+data.error : 'No containers found.';
+                document.getElementById('noContainers').style.display = 'block';
+                return;
+            }
+            document.getElementById('noContainers').style.display = 'none';
+            document.getElementById('containersTable').style.display = 'table';
+            var body = document.getElementById('containersBody');
+            body.innerHTML = '';
+            data.forEach(function(c){
+                var name = containerName(c.Names);
+                var cid = shortID(c.Id);
+                var state = c.State || 'unknown';
+                var statusClass = state === 'running' ? 'badge-running' :
+                                  state === 'exited' ? 'badge-exited' :
+                                  state === 'paused' ? 'badge-paused' : 'badge-created';
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td>'+esc(name)+'</td>' +
+                    '<td style="font-size:.85rem">'+esc(c.Image)+'</td>' +
+                    '<td><span class="'+statusClass+'">'+esc(state)+'</span><br><span style="font-size:.75rem;color:var(--text-muted)">'+esc(c.Status)+'</span></td>' +
+                    '<td style="font-size:.8rem">'+esc(formatPorts(c.Ports))+'</td>' +
+                    '<td style="font-size:.8rem">'+timeAgo(c.Created)+'</td>' +
+                    '<td style="white-space:nowrap">' +
+                    (state !== 'running' ? '<button class="btn btn-sm" onclick="containerAction(\''+cid+'\',\'start\')">Start</button> ' : '') +
+                    (state === 'running' ? '<button class="btn btn-sm" onclick="containerAction(\''+cid+'\',\'stop\')">Stop</button> ' : '') +
+                    '<button class="btn btn-sm" onclick="containerAction(\''+cid+'\',\'restart\')">Restart</button> ' +
+                    '<button class="btn btn-sm" onclick="showContainerLogs(\''+cid+'\',\''+esc(name)+'\')">Logs</button> ' +
+                    (state === 'running' ? '<button class="btn btn-sm" onclick="showContainerStats(\''+cid+'\',\''+esc(name)+'\')">Stats</button> ' : '') +
+                    '<button class="btn btn-sm" style="color:var(--err)" onclick="removeContainer(\''+cid+'\',\''+esc(name)+'\')">Remove</button>' +
+                    '</td>';
+                body.appendChild(tr);
+            });
+        })
+        .catch(function(e){
+            document.getElementById('noContainers').textContent = 'Error: ' + e.message;
+        });
+    };
+
+    window.containerAction = function(id, action){
+        fetch('/docker/containers/'+encodeURIComponent(id)+'/'+action, {method:'POST', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            loadContainers();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    window.removeContainer = function(id, name){
+        if(!confirm('Remove container "'+name+'"? This will force-stop and delete it.')) return;
+        fetch('/docker/containers/'+encodeURIComponent(id), {method:'DELETE', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            loadContainers();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    window.showContainerLogs = function(id, name){
+        openModal('<h3 style="margin-top:0">Logs: '+esc(name)+'</h3><div class="log-output" id="logOutput">Loading...</div>');
+        fetch('/docker/containers/'+encodeURIComponent(id)+'/logs', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            document.getElementById('logOutput').textContent = data.logs || data.error || 'No logs available';
+        })
+        .catch(function(e){
+            document.getElementById('logOutput').textContent = 'Error: ' + e.message;
+        });
+    };
+
+    window.showContainerStats = function(id, name){
+        openModal('<h3 style="margin-top:0">Stats: '+esc(name)+'</h3><div id="statsContent">Loading...</div>');
+        fetch('/docker/containers/'+encodeURIComponent(id)+'/stats', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){
+                document.getElementById('statsContent').innerHTML = '<p style="color:var(--err)">'+esc(data.error)+'</p>';
+                return;
+            }
+            var cpuStr = data.cpu_percent ? data.cpu_percent.toFixed(2) + '%' : '0%';
+            var memStr = humanBytes(data.memory_usage) + ' / ' + humanBytes(data.memory_limit);
+            var memPct = data.memory_percent ? data.memory_percent.toFixed(1) + '%' : '0%';
+            var netStr = humanBytes(data.net_input) + ' in / ' + humanBytes(data.net_output) + ' out';
+            var blockStr = humanBytes(data.block_read) + ' read / ' + humanBytes(data.block_write) + ' write';
+            document.getElementById('statsContent').innerHTML =
+                '<div class="stats-grid" style="grid-template-columns:1fr 1fr">' +
+                '<div class="stat-card"><h3>CPU</h3><div class="big-number" style="font-size:1.4rem">'+cpuStr+'</div></div>' +
+                '<div class="stat-card"><h3>Memory</h3><div class="big-number" style="font-size:1.2rem">'+memStr+'</div><p style="color:var(--text-muted);font-size:.8rem">'+memPct+'</p></div>' +
+                '<div class="stat-card"><h3>Network I/O</h3><p style="font-size:.9rem">'+netStr+'</p></div>' +
+                '<div class="stat-card"><h3>Block I/O</h3><p style="font-size:.9rem">'+blockStr+'</p></div>' +
+                '</div>' +
+                '<p style="color:var(--text-muted);font-size:.8rem;margin-top:.5rem">PIDs: '+(data.pids||0)+'</p>';
+        })
+        .catch(function(e){
+            document.getElementById('statsContent').innerHTML = '<p style="color:var(--err)">'+esc(e.message)+'</p>';
+        });
+    };
+
+    window.showCreateContainerModal = function(){
+        openModal(
+            '<h3 style="margin-top:0">Create Container</h3>' +
+            '<div class="form-group"><label>Name</label><input type="text" id="ccName" placeholder="my-container"></div>' +
+            '<div class="form-group"><label>Image</label><input type="text" id="ccImage" placeholder="nginx:latest"></div>' +
+            '<div class="form-group"><label>Host Port : Container Port</label>' +
+            '<div style="display:flex;gap:.5rem"><input type="text" id="ccHostPort" placeholder="8080" style="width:50%"><input type="text" id="ccContainerPort" placeholder="80" style="width:50%"></div></div>' +
+            '<div class="form-group"><label>Environment (KEY=value, one per line)</label><textarea id="ccEnv" rows="3" placeholder="DB_HOST=localhost"></textarea></div>' +
+            '<div class="form-group"><label>Restart Policy</label><select id="ccRestart"><option value="unless-stopped">Unless Stopped</option><option value="always">Always</option><option value="on-failure">On Failure</option><option value="no">Never</option></select></div>' +
+            '<div class="form-group"><label>Command</label><input type="text" id="ccCmd" placeholder="optional"></div>' +
+            '<button class="btn btn-primary" onclick="createContainer()">Create & Start</button>'
+        );
+    };
+
+    window.createContainer = function(){
+        var name = document.getElementById('ccName').value.trim();
+        var image = document.getElementById('ccImage').value.trim();
+        if(!image){ alert('Image is required'); return; }
+
+        var ports = {};
+        var hp = document.getElementById('ccHostPort').value.trim();
+        var cp = document.getElementById('ccContainerPort').value.trim();
+        if(hp && cp) ports[hp] = cp;
+
+        var env = {};
+        var envText = document.getElementById('ccEnv').value.trim();
+        if(envText){
+            envText.split('\n').forEach(function(line){
+                var eq = line.indexOf('=');
+                if(eq > 0) env[line.substring(0,eq).trim()] = line.substring(eq+1);
+            });
+        }
+
+        var body = {
+            name: name,
+            image: image,
+            ports: ports,
+            env: env,
+            restart: document.getElementById('ccRestart').value,
+            cmd: document.getElementById('ccCmd').value.trim()
+        };
+
+        fetch('/docker/containers', {
+            method:'POST',
+            credentials:'same-origin',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            closeModal();
+            loadContainers();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    // ── Images ──
+    window.loadImages = function(){
+        fetch('/docker/images', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(!data || data.error || !Array.isArray(data) || data.length === 0){
+                document.getElementById('imagesTable').style.display = 'none';
+                document.getElementById('noImages').textContent = data && data.error ? 'Error: '+data.error : 'No images found.';
+                document.getElementById('noImages').style.display = 'block';
+                return;
+            }
+            document.getElementById('noImages').style.display = 'none';
+            document.getElementById('imagesTable').style.display = 'table';
+            var body = document.getElementById('imagesBody');
+            body.innerHTML = '';
+            data.forEach(function(img){
+                var tags = (img.RepoTags && img.RepoTags.length) ? img.RepoTags.join(', ') : '<none>';
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td>'+esc(tags)+'</td>' +
+                    '<td style="font-size:.85rem;font-family:monospace">'+shortID(img.Id)+'</td>' +
+                    '<td>'+humanBytes(img.Size)+'</td>' +
+                    '<td style="font-size:.8rem">'+timeAgo(img.Created)+'</td>' +
+                    '<td><button class="btn btn-sm" style="color:var(--err)" onclick="removeImage(\''+shortID(img.Id)+'\')">Remove</button></td>';
+                body.appendChild(tr);
+            });
+        })
+        .catch(function(e){
+            document.getElementById('noImages').textContent = 'Error: ' + e.message;
+        });
+    };
+
+    window.pullImage = function(){
+        var ref = document.getElementById('pullImageRef').value.trim();
+        if(!ref){ alert('Enter an image reference'); return; }
+        document.getElementById('pullProgress').style.display = 'block';
+        fetch('/docker/images/pull', {
+            method:'POST',
+            credentials:'same-origin',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({image: ref})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            document.getElementById('pullProgress').style.display = 'none';
+            if(data.error){ alert('Error: ' + data.error); return; }
+            document.getElementById('pullImageRef').value = '';
+            loadImages();
+        })
+        .catch(function(e){
+            document.getElementById('pullProgress').style.display = 'none';
+            alert('Error: ' + e.message);
+        });
+    };
+
+    window.removeImage = function(id){
+        if(!confirm('Remove image '+id+'?')) return;
+        fetch('/docker/images/'+encodeURIComponent(id), {method:'DELETE', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            loadImages();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    // ── Volumes ──
+    window.loadVolumes = function(){
+        fetch('/docker/volumes', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(!data || data.error || !Array.isArray(data) || data.length === 0){
+                document.getElementById('volumesTable').style.display = 'none';
+                document.getElementById('noVolumes').textContent = data && data.error ? 'Error: '+data.error : 'No volumes found.';
+                document.getElementById('noVolumes').style.display = 'block';
+                return;
+            }
+            document.getElementById('noVolumes').style.display = 'none';
+            document.getElementById('volumesTable').style.display = 'table';
+            var body = document.getElementById('volumesBody');
+            body.innerHTML = '';
+            data.forEach(function(v){
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td>'+esc(v.Name)+'</td>' +
+                    '<td>'+esc(v.Driver)+'</td>' +
+                    '<td style="font-size:.8rem;word-break:break-all">'+esc(v.Mountpoint)+'</td>' +
+                    '<td style="font-size:.8rem">'+esc(v.CreatedAt || '-')+'</td>' +
+                    '<td><button class="btn btn-sm" style="color:var(--err)" onclick="removeVolume(\''+esc(v.Name)+'\')">Remove</button></td>';
+                body.appendChild(tr);
+            });
+        })
+        .catch(function(e){
+            document.getElementById('noVolumes').textContent = 'Error: ' + e.message;
+        });
+    };
+
+    window.showCreateVolumeModal = function(){
+        openModal(
+            '<h3 style="margin-top:0">Create Volume</h3>' +
+            '<div class="form-group"><label>Name</label><input type="text" id="cvName" placeholder="my-volume"></div>' +
+            '<button class="btn btn-primary" onclick="createVolume()">Create</button>'
+        );
+    };
+
+    window.createVolume = function(){
+        var name = document.getElementById('cvName').value.trim();
+        if(!name){ alert('Name is required'); return; }
+        fetch('/docker/volumes', {
+            method:'POST',
+            credentials:'same-origin',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({name: name})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            closeModal();
+            loadVolumes();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    window.removeVolume = function(name){
+        if(!confirm('Remove volume "'+name+'"?')) return;
+        fetch('/docker/volumes/'+encodeURIComponent(name), {method:'DELETE', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            loadVolumes();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    // ── Networks ──
+    window.loadNetworks = function(){
+        fetch('/docker/networks', {credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(!data || data.error || !Array.isArray(data) || data.length === 0){
+                document.getElementById('networksTable').style.display = 'none';
+                document.getElementById('noNetworks').textContent = data && data.error ? 'Error: '+data.error : 'No networks found.';
+                document.getElementById('noNetworks').style.display = 'block';
+                return;
+            }
+            document.getElementById('noNetworks').style.display = 'none';
+            document.getElementById('networksTable').style.display = 'table';
+            var body = document.getElementById('networksBody');
+            body.innerHTML = '';
+            data.forEach(function(n){
+                var subnet = '-', gateway = '-';
+                if(n.IPAM && n.IPAM.Config && n.IPAM.Config.length > 0){
+                    subnet = n.IPAM.Config[0].Subnet || '-';
+                    gateway = n.IPAM.Config[0].Gateway || '-';
+                }
+                var nid = shortID(n.Id);
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td>'+esc(n.Name)+'</td>' +
+                    '<td style="font-size:.85rem;font-family:monospace">'+nid+'</td>' +
+                    '<td>'+esc(n.Driver)+'</td>' +
+                    '<td>'+esc(n.Scope)+'</td>' +
+                    '<td>'+esc(subnet)+'</td>' +
+                    '<td>'+esc(gateway)+'</td>' +
+                    '<td><button class="btn btn-sm" style="color:var(--err)" onclick="removeNetwork(\''+nid+'\',\''+esc(n.Name)+'\')">Remove</button></td>';
+                body.appendChild(tr);
+            });
+        })
+        .catch(function(e){
+            document.getElementById('noNetworks').textContent = 'Error: ' + e.message;
+        });
+    };
+
+    window.showCreateNetworkModal = function(){
+        openModal(
+            '<h3 style="margin-top:0">Create Network</h3>' +
+            '<div class="form-group"><label>Name</label><input type="text" id="cnName" placeholder="my-network"></div>' +
+            '<div class="form-group"><label>Driver</label><select id="cnDriver"><option value="bridge">bridge</option><option value="overlay">overlay</option><option value="host">host</option><option value="macvlan">macvlan</option></select></div>' +
+            '<button class="btn btn-primary" onclick="createNetwork()">Create</button>'
+        );
+    };
+
+    window.createNetwork = function(){
+        var name = document.getElementById('cnName').value.trim();
+        if(!name){ alert('Name is required'); return; }
+        fetch('/docker/networks', {
+            method:'POST',
+            credentials:'same-origin',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({name: name, driver: document.getElementById('cnDriver').value})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            closeModal();
+            loadNetworks();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    window.removeNetwork = function(id, name){
+        if(!confirm('Remove network "'+name+'"?')) return;
+        fetch('/docker/networks/'+encodeURIComponent(id), {method:'DELETE', credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.error){ alert('Error: ' + data.error); return; }
+            loadNetworks();
+        })
+        .catch(function(e){ alert('Error: ' + e.message); });
+    };
+
+    // ── Modal ──
+    window.openModal = function(html){
+        var modal = document.getElementById('modal');
+        document.getElementById('modalContent').innerHTML = html;
+        modal.style.display = 'flex';
+    };
+
+    window.closeModal = function(){
+        document.getElementById('modal').style.display = 'none';
+    };
+
+    document.getElementById('modal').addEventListener('click', function(e){
+        if(e.target === this) closeModal();
+    });
+
+    // ── Auto-refresh containers every 10s when tab is visible ──
+    setInterval(function(){
+        var tab = document.querySelector('#dockerTabs .tab.active');
+        if(tab && tab.dataset.tab === 'containers') loadContainers();
+    }, 10000);
+
+})();
+</script>
+{{end}}

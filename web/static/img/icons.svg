@@ -60,6 +60,13 @@
     <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
     <path d="M18 9a9 9 0 0 1-9 9"/>
   </symbol>
+  <!-- Docker / Container -->
+  <symbol id="icon-docker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1" y="11" width="5" height="4" rx="0.5"/><rect x="7" y="11" width="5" height="4" rx="0.5"/>
+    <rect x="13" y="11" width="5" height="4" rx="0.5"/><rect x="4" y="6" width="5" height="4" rx="0.5"/>
+    <rect x="10" y="6" width="5" height="4" rx="0.5"/>
+    <path d="M1 16c0 2 2.5 4 8 4s10-1.5 12-4c1-1.2.5-3-1-4H19"/>
+  </symbol>
   <!-- AUTARCH / Hexagon -->
   <symbol id="icon-autarch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>

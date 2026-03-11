@@ -84,6 +84,46 @@ func (s *Server) setupRoutes() {
 		r.Put("/git/orgs/{name}/members/{username}", h.GitOrgAddMember)
 		r.Delete("/git/orgs/{name}/members/{username}", h.GitOrgRemoveMember)
 
+		// Docker Management
+		r.Get("/docker", h.DockerSetup)
+		r.Post("/docker/install", h.DockerInstall)
+		r.Get("/docker/status", h.DockerStatus)
+		r.Post("/docker/prune", h.DockerPrune)
+		// Docker Containers
+		r.Get("/docker/containers", h.DockerContainers)
+		r.Get("/docker/containers/{id}", h.DockerContainerGet)
+		r.Post("/docker/containers", h.DockerContainerCreate)
+		r.Post("/docker/containers/{id}/start", h.DockerContainerStart)
+		r.Post("/docker/containers/{id}/stop", h.DockerContainerStop)
+		r.Post("/docker/containers/{id}/restart", h.DockerContainerRestart)
+		r.Delete("/docker/containers/{id}", h.DockerContainerRemove)
+		r.Get("/docker/containers/{id}/logs", h.DockerContainerLogs)
+		r.Get("/docker/containers/{id}/stats", h.DockerContainerStats)
+		// Docker Images
+		r.Get("/docker/images", h.DockerImages)
+		r.Post("/docker/images/pull", h.DockerImagePull)
+		r.Delete("/docker/images/{id}", h.DockerImageRemove)
+		// Docker Volumes
+		r.Get("/docker/volumes", h.DockerVolumes)
+		r.Post("/docker/volumes", h.DockerVolumeCreate)
+		r.Delete("/docker/volumes/{name}", h.DockerVolumeRemove)
+		// Docker Networks
+		r.Get("/docker/networks", h.DockerNetworks)
+		r.Post("/docker/networks", h.DockerNetworkCreate)
+		r.Delete("/docker/networks/{id}", h.DockerNetworkRemove)
+		// Docker One-Click Deploy
+		r.Post("/docker/deploy", h.DockerDeploy)
+		r.Get("/docker/deployments", h.DockerDeployments)
+		r.Get("/docker/deployments/{name}", h.DockerDeploymentGet)
+		r.Delete("/docker/deployments/{name}", h.DockerUndeploy)
+		r.Post("/docker/deployments/{name}/update", h.DockerDeploymentUpdate)
+		r.Post("/docker/deployments/{name}/scale", h.DockerDeploymentScale)
+		// Docker Compose
+		r.Post("/docker/compose/up", h.DockerComposeUp)
+		r.Post("/docker/compose/{project}/down", h.DockerComposeDown)
+		r.Get("/docker/compose/{project}", h.DockerComposePS)
+		r.Get("/docker/compose/{project}/logs", h.DockerComposeLogs)
+
 		// SSL
 		r.Get("/ssl", h.SSLOverview)
 		r.Post("/ssl/{domain}/issue", h.SSLIssue)

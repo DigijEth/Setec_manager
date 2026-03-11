@@ -6,11 +6,13 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"sync"
 
 	"setec-manager/internal/config"
 	"setec-manager/internal/db"
+	"setec-manager/internal/docker"
 	"setec-manager/internal/gitea"
 	"setec-manager/internal/hosting"
 	"setec-manager/web"
@@ -23,6 +25,8 @@ type Handler struct {
 	DB             *db.DB
 	HostingConfigs *hosting.ProviderConfigStore
 	GiteaClient    *gitea.Client
+	DockerClient   *docker.Client
+	DockerDeployer *docker.Deployer
 	tmpl           *template.Template
 	once           sync.Once
 }
@@ -37,6 +41,10 @@ func New(cfg *config.Config, database *db.DB, hostingConfigs *hosting.ProviderCo
 	if cfg.Gitea.Installed && cfg.Gitea.BaseURL != "" && cfg.Gitea.AdminToken != "" {
 		h.GiteaClient = gitea.New(cfg.Gitea.BaseURL, cfg.Gitea.AdminToken)
 	}
+	// Initialize Docker client (always available; checks installation at runtime)
+	h.DockerClient = docker.New()
+	stateDir := filepath.Dir(cfg.Database.Path)
+	h.DockerDeployer = docker.NewDeployer(h.DockerClient, stateDir, cfg.Nginx.SitesAvailable)
 	return h
 }
 
