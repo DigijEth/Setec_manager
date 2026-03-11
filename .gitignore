@@ -1,0 +1,7 @@
+setec-manager
+setec-manager-linux
+*.exe
+*.db
+*.log
+data/
+.env
