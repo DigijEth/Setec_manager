@@ -59,7 +59,9 @@ func (h *Handler) getFuncMap() template.FuncMap {
 
 type pageData struct {
 	Title  string
+	Claims interface{}
 	Data   interface{}
+	Flash  string
 	Config *config.Config
 }
 
