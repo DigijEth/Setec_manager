@@ -1,0 +1,40 @@
+{{define "content"}}
+<h2>Firewall Rules</h2>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <p><strong>Status:</strong>
+        {{if .Data.Active}}
+            <span class="badge badge-ok">Active</span>
+        {{else}}
+            <span class="badge badge-err">Inactive</span>
+        {{end}}
+    </p>
+    <form method="POST" action="/firewall/reload"><button class="btn btn-sm">Reload</button></form>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr><th>#</th><th>Action</th><th>From</th><th>To</th><th>Port</th><th>Proto</th></tr>
+    </thead>
+    <tbody>
+        {{range .Data.Rules}}
+        <tr>
+            <td>{{.Num}}</td>
+            <td>
+                {{if eq .Action "ALLOW"}}
+                    <span class="badge badge-ok">ALLOW</span>
+                {{else}}
+                    <span class="badge badge-err">{{.Action}}</span>
+                {{end}}
+            </td>
+            <td>{{.From}}</td>
+            <td>{{.To}}</td>
+            <td>{{.Port}}</td>
+            <td>{{.Proto}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="6">No rules configured.</td></tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

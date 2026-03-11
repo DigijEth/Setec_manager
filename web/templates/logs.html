@@ -1,0 +1,38 @@
+{{define "content"}}
+<h2>Logs</h2>
+
+<div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+    <select id="logSource" class="form-group" style="margin:0" onchange="loadLogs()">
+        {{range .Data.Sources}}
+        <option value="{{.}}">{{.}}</option>
+        {{end}}
+    </select>
+    <select id="logLines" class="form-group" style="margin:0" onchange="loadLogs()">
+        <option value="50">50 lines</option>
+        <option value="100" selected>100 lines</option>
+        <option value="500">500 lines</option>
+    </select>
+    <button class="btn btn-sm" onclick="loadLogs()">Refresh</button>
+    <label style="display:flex;align-items:center;gap:.3rem">
+        <input type="checkbox" id="autoScroll" checked> Auto-scroll
+    </label>
+</div>
+
+<pre id="logOutput" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;max-height:60vh;overflow:auto;font-size:.85rem;white-space:pre-wrap">{{.Data.Lines}}</pre>
+
+<script>
+async function loadLogs() {
+    const src = document.getElementById('logSource').value;
+    const n = document.getElementById('logLines').value;
+    try {
+        const r = await fetch('/api/logs?source=' + encodeURIComponent(src) + '&lines=' + n);
+        const d = await r.json();
+        const el = document.getElementById('logOutput');
+        el.textContent = d.lines || '';
+        if (document.getElementById('autoScroll').checked) {
+            el.scrollTop = el.scrollHeight;
+        }
+    } catch(e) { console.error('log fetch failed', e); }
+}
+</script>
+{{end}}

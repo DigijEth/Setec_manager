@@ -1,0 +1,44 @@
+server:
+  host: "0.0.0.0"
+  port: 9090
+  tls: true
+  cert: "/opt/setec-manager/data/acme/manager.crt"
+  key: "/opt/setec-manager/data/acme/manager.key"
+
+database:
+  path: "/opt/setec-manager/data/setec.db"
+
+nginx:
+  sites_available: "/etc/nginx/sites-available"
+  sites_enabled: "/etc/nginx/sites-enabled"
+  snippets: "/etc/nginx/snippets"
+  webroot: "/var/www"
+  certbot_webroot: "/var/www/certbot"
+
+acme:
+  email: ""
+  staging: false
+  account_dir: "/opt/setec-manager/data/acme"
+
+autarch:
+  install_dir: "/var/www/autarch"
+  git_repo: "https://github.com/DigijEth/autarch.git"
+  git_branch: "main"
+  web_port: 8181
+  dns_port: 53
+
+float:
+  enabled: false
+  max_sessions: 10
+  session_ttl: "24h"
+
+backups:
+  dir: "/opt/setec-manager/data/backups"
+  max_age_days: 30
+  max_count: 50
+
+logging:
+  level: "info"
+  file: "/var/log/setec-manager.log"
+  max_size_mb: 100
+  max_backups: 3

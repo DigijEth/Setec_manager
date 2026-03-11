@@ -1,0 +1,50 @@
+{{define "content"}}
+<h2>System Monitor</h2>
+
+<div class="stats-grid" id="monitorStats">
+    <div class="stat-card">
+        <h3>CPU</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" id="cpuBar" style="width: {{printf "%.0f" .Data.CPU}}%"></div>
+        </div>
+        <p id="cpuText">{{printf "%.1f" .Data.CPU}}%</p>
+    </div>
+    <div class="stat-card">
+        <h3>Memory</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" id="memBar" style="width: {{printf "%.0f" .Data.MemPercent}}%"></div>
+        </div>
+        <p id="memText">{{.Data.MemUsed}} / {{.Data.MemTotal}} ({{printf "%.1f" .Data.MemPercent}}%)</p>
+    </div>
+    <div class="stat-card">
+        <h3>Disk</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" id="diskBar" style="width: {{printf "%.0f" .Data.DiskPercent}}%"></div>
+        </div>
+        <p id="diskText">{{.Data.DiskUsed}} / {{.Data.DiskTotal}} ({{printf "%.1f" .Data.DiskPercent}}%)</p>
+    </div>
+    <div class="stat-card">
+        <h3>Network</h3>
+        <p><strong>In:</strong> <span id="netIn">{{.Data.NetIn}}</span></p>
+        <p><strong>Out:</strong> <span id="netOut">{{.Data.NetOut}}</span></p>
+    </div>
+</div>
+
+<h3>Processes (Top 10)</h3>
+<table class="data-table">
+    <thead>
+        <tr><th>PID</th><th>Name</th><th>CPU %</th><th>Mem %</th><th>User</th></tr>
+    </thead>
+    <tbody>
+        {{range .Data.Processes}}
+        <tr>
+            <td>{{.PID}}</td>
+            <td>{{.Name}}</td>
+            <td>{{printf "%.1f" .CPU}}</td>
+            <td>{{printf "%.1f" .Mem}}</td>
+            <td>{{.User}}</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

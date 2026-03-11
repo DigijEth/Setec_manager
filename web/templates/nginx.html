@@ -1,0 +1,58 @@
+{{define "content"}}
+<h2>Nginx</h2>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Service Status</h3>
+        {{if .Data.Running}}
+            <span class="badge badge-ok">Running</span>
+        {{else}}
+            <span class="badge badge-err">Stopped</span>
+        {{end}}
+        <p><strong>Version:</strong> {{.Data.Version}}</p>
+        <p><strong>Config Test:</strong>
+            {{if .Data.ConfigOK}}
+                <span class="badge badge-ok">OK</span>
+            {{else}}
+                <span class="badge badge-err">Error</span>
+            {{end}}
+        </p>
+    </div>
+    <div class="stat-card">
+        <h3>Connections</h3>
+        <p><strong>Active:</strong> {{.Data.ActiveConns}}</p>
+        <p><strong>Requests:</strong> {{.Data.TotalRequests}}</p>
+    </div>
+</div>
+
+<h3>Actions</h3>
+<div style="display:flex;gap:.5rem">
+    <form method="POST" action="/nginx/reload"><button class="btn btn-primary">Reload</button></form>
+    <form method="POST" action="/nginx/restart"><button class="btn">Restart</button></form>
+    <form method="POST" action="/nginx/test"><button class="btn">Test Config</button></form>
+</div>
+
+<h3>Virtual Hosts</h3>
+<table class="data-table">
+    <thead>
+        <tr><th>Server Name</th><th>Listen</th><th>Enabled</th></tr>
+    </thead>
+    <tbody>
+        {{range .Data.VHosts}}
+        <tr>
+            <td>{{.ServerName}}</td>
+            <td>{{.Listen}}</td>
+            <td>
+                {{if .Enabled}}
+                    <span class="badge badge-ok">Yes</span>
+                {{else}}
+                    <span class="badge badge-err">No</span>
+                {{end}}
+            </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="3">No virtual hosts configured.</td></tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

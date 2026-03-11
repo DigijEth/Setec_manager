@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 60" width="300" height="60">
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#a855f7"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield icon -->
+  <path d="M30 5 L52 15 L52 33 Q52 48 30 53 Q8 48 8 33 L8 15 Z"
+        fill="url(#brandGrad)" opacity="0.15" stroke="url(#brandGrad)" stroke-width="1.5"/>
+  <text x="30" y="38" font-family="monospace" font-size="24" font-weight="bold"
+        fill="url(#brandGrad)" text-anchor="middle">S</text>
+  <!-- SETEC text -->
+  <text x="70" y="32" font-family="monospace" font-size="26" font-weight="bold"
+        fill="url(#brandGrad)" letter-spacing="4">SETEC</text>
+  <!-- Subtitle -->
+  <text x="70" y="48" font-family="monospace" font-size="11" fill="#6b7280"
+        letter-spacing="2">APP MANAGER</text>
+</svg>

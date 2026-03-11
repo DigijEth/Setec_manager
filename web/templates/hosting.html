@@ -1,0 +1,783 @@
+{{define "content"}}
+<h2>Hosting Providers</h2>
+
+<!-- Provider Cards -->
+<div class="stats-grid" id="provider-cards">
+    {{if .Data.Providers}}
+    {{range .Data.Providers}}
+    <div class="stat-card provider-card" data-provider="{{.Name}}" onclick="selectProvider('{{.Name}}')">
+        <h3>{{.DisplayName}}</h3>
+        <p>
+            {{if .Connected}}
+                <span class="badge badge-ok">Connected</span>
+            {{else if .HasConfig}}
+                <span class="badge badge-err">Disconnected</span>
+            {{else}}
+                <span class="badge">Not Configured</span>
+            {{end}}
+        </p>
+    </div>
+    {{end}}
+    {{else}}
+    <div class="stat-card">
+        <h3>No Providers</h3>
+        <p style="color: var(--text-muted);">No hosting providers are registered. Providers are loaded at server start.</p>
+    </div>
+    {{end}}
+</div>
+
+<!-- Tab Navigation -->
+<div id="hosting-tabs" style="display:none; margin-top:1.5rem;">
+    <div style="display:flex; gap:.25rem; border-bottom:1px solid var(--border); margin-bottom:1rem;">
+        <button class="btn btn-sm tab-btn active" data-tab="config" onclick="switchTab('config')">Configuration</button>
+        <button class="btn btn-sm tab-btn" data-tab="dns" onclick="switchTab('dns')">DNS</button>
+        <button class="btn btn-sm tab-btn" data-tab="domains" onclick="switchTab('domains')">Domains</button>
+        <button class="btn btn-sm tab-btn" data-tab="vps" onclick="switchTab('vps')">VPS</button>
+        <button class="btn btn-sm tab-btn" data-tab="ssh" onclick="switchTab('ssh')">SSH Keys</button>
+        <button class="btn btn-sm tab-btn" data-tab="billing" onclick="switchTab('billing')">Billing</button>
+    </div>
+
+    <!-- ═══════ CONFIG TAB ═══════ -->
+    <div class="tab-panel" id="tab-config">
+        <h3>API Configuration</h3>
+        <div style="max-width:500px;">
+            <div class="form-group">
+                <label>API Key / Bearer Token</label>
+                <input type="password" id="cfg-api-key" placeholder="Enter API key">
+            </div>
+            <div class="form-group">
+                <label>API Secret (optional)</label>
+                <input type="password" id="cfg-api-secret" placeholder="Enter API secret if required">
+            </div>
+            <div style="display:flex; gap:.5rem;">
+                <button class="btn btn-primary" onclick="saveConfig()">Save Credentials</button>
+                <button class="btn" onclick="testConnection()">Test Connection</button>
+            </div>
+            <div id="config-status" style="margin-top:.75rem;"></div>
+        </div>
+    </div>
+
+    <!-- ═══════ DNS TAB ═══════ -->
+    <div class="tab-panel" id="tab-dns" style="display:none;">
+        <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:1rem;">
+            <h3 style="margin:0;">DNS Records</h3>
+            <div class="form-group" style="margin:0;">
+                <select id="dns-domain-select" onchange="loadDNS()">
+                    <option value="">-- select domain --</option>
+                </select>
+            </div>
+            <button class="btn btn-sm" onclick="loadDNS()">Refresh</button>
+            <button class="btn btn-sm" onclick="showAddDNS()" style="margin-left:auto;">Add Record</button>
+        </div>
+
+        <!-- Add/Edit DNS form (hidden by default) -->
+        <div id="dns-add-form" style="display:none; margin-bottom:1rem; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);">
+            <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0; flex:0 0 120px;">
+                    <label>Type</label>
+                    <select id="dns-type">
+                        <option>A</option><option>AAAA</option><option>CNAME</option>
+                        <option>MX</option><option>TXT</option><option>NS</option>
+                        <option>SRV</option><option>CAA</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0; flex:1; min-width:140px;">
+                    <label>Name</label>
+                    <input type="text" id="dns-name" placeholder="@ or subdomain">
+                </div>
+                <div class="form-group" style="margin:0; flex:2; min-width:200px;">
+                    <label>Content</label>
+                    <input type="text" id="dns-content" placeholder="Value">
+                </div>
+                <div class="form-group" style="margin:0; flex:0 0 80px;">
+                    <label>TTL</label>
+                    <input type="text" id="dns-ttl" value="3600">
+                </div>
+                <div class="form-group" style="margin:0; flex:0 0 80px;">
+                    <label>Priority</label>
+                    <input type="text" id="dns-priority" value="0">
+                </div>
+            </div>
+            <div style="margin-top:.5rem; display:flex; gap:.5rem;">
+                <button class="btn btn-primary btn-sm" onclick="saveDNSRecord()">Save Record</button>
+                <button class="btn btn-sm" onclick="hideAddDNS()">Cancel</button>
+            </div>
+        </div>
+
+        <table class="data-table" id="dns-table">
+            <thead>
+                <tr><th>Type</th><th>Name</th><th>Content</th><th>TTL</th><th>Priority</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="dns-body">
+                <tr><td colspan="6" style="color:var(--text-muted); text-align:center;">Select a domain to load DNS records</td></tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:.75rem;">
+            <button class="btn btn-sm" onclick="resetDNS()" style="color:var(--err);">Reset DNS to Defaults</button>
+        </div>
+    </div>
+
+    <!-- ═══════ DOMAINS TAB ═══════ -->
+    <div class="tab-panel" id="tab-domains" style="display:none;">
+        <h3>Registered Domains</h3>
+        <table class="data-table" id="domains-table">
+            <thead>
+                <tr><th>Domain</th><th>Status</th><th>Expires</th><th>Locked</th><th>Privacy</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="domains-body">
+                <tr><td colspan="6" style="color:var(--text-muted); text-align:center;">Loading...</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Check Availability</h3>
+        <div style="display:flex; gap:.5rem; max-width:600px; margin-bottom:.5rem;">
+            <div class="form-group" style="margin:0; flex:1;">
+                <input type="text" id="domain-check-input" placeholder="mydomain">
+            </div>
+            <div class="form-group" style="margin:0; flex:1;">
+                <input type="text" id="domain-check-tlds" placeholder="com,net,org,io" value="com,net,org,io,dev">
+            </div>
+            <button class="btn btn-primary" onclick="checkDomain()">Check</button>
+        </div>
+        <div id="domain-check-result" style="margin-bottom:1rem;"></div>
+
+        <h3>Purchase Domain</h3>
+        <div style="max-width:500px;">
+            <div class="form-group">
+                <label>Domain (full, e.g. example.com)</label>
+                <input type="text" id="purchase-domain" placeholder="example.com">
+            </div>
+            <div style="display:flex; gap:.75rem;">
+                <div class="form-group" style="flex:1;">
+                    <label>Period (years)</label>
+                    <select id="purchase-period">
+                        <option value="1">1 year</option>
+                        <option value="2">2 years</option>
+                        <option value="3">3 years</option>
+                        <option value="5">5 years</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Options</label>
+                    <div style="display:flex; gap:1rem; padding-top:.35rem;">
+                        <label style="font-size:.85rem;"><input type="checkbox" id="purchase-autorenew" checked> Auto-Renew</label>
+                        <label style="font-size:.85rem;"><input type="checkbox" id="purchase-privacy" checked> Privacy</label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="purchaseDomain()">Purchase</button>
+        </div>
+    </div>
+
+    <!-- ═══════ VPS TAB ═══════ -->
+    <div class="tab-panel" id="tab-vps" style="display:none;">
+        <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:1rem;">
+            <h3 style="margin:0;">Virtual Machines</h3>
+            <button class="btn btn-sm" onclick="loadVMs()">Refresh</button>
+            <button class="btn btn-sm btn-primary" onclick="showCreateVM()" style="margin-left:auto;">Create VM</button>
+        </div>
+
+        <table class="data-table" id="vms-table">
+            <thead>
+                <tr><th>Hostname</th><th>Status</th><th>Plan</th><th>Data Center</th><th>IP Address</th><th>CPU</th><th>RAM</th><th>Disk</th></tr>
+            </thead>
+            <tbody id="vms-body">
+                <tr><td colspan="8" style="color:var(--text-muted); text-align:center;">Loading...</td></tr>
+            </tbody>
+        </table>
+
+        <!-- Create VM form (hidden by default) -->
+        <div id="vm-create-form" style="display:none; margin-top:1rem; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);">
+            <h3>Create New VM</h3>
+            <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:200px;">
+                    <label>Hostname</label>
+                    <input type="text" id="vm-hostname" placeholder="my-server">
+                </div>
+                <div class="form-group" style="flex:1; min-width:200px;">
+                    <label>Data Center</label>
+                    <select id="vm-datacenter"><option value="">Loading...</option></select>
+                </div>
+                <div class="form-group" style="flex:1; min-width:200px;">
+                    <label>Plan</label>
+                    <input type="text" id="vm-plan" placeholder="Plan ID">
+                </div>
+            </div>
+            <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:200px;">
+                    <label>OS Template</label>
+                    <input type="text" id="vm-template" placeholder="ubuntu-22.04">
+                </div>
+                <div class="form-group" style="flex:1; min-width:200px;">
+                    <label>Root Password</label>
+                    <input type="password" id="vm-password" placeholder="Secure password">
+                </div>
+                <div class="form-group" style="flex:1; min-width:200px;">
+                    <label>SSH Key (optional)</label>
+                    <select id="vm-sshkey"><option value="">None</option></select>
+                </div>
+            </div>
+            <div style="display:flex; gap:.5rem;">
+                <button class="btn btn-primary" onclick="createVM()">Create VM</button>
+                <button class="btn" onclick="document.getElementById('vm-create-form').style.display='none'">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════ SSH KEYS TAB ═══════ -->
+    <div class="tab-panel" id="tab-ssh" style="display:none;">
+        <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:1rem;">
+            <h3 style="margin:0;">SSH Keys</h3>
+            <button class="btn btn-sm" onclick="loadSSHKeys()">Refresh</button>
+        </div>
+
+        <table class="data-table" id="ssh-table">
+            <thead>
+                <tr><th>Name</th><th>Fingerprint</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="ssh-body">
+                <tr><td colspan="3" style="color:var(--text-muted); text-align:center;">Loading...</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Add SSH Key</h3>
+        <div style="max-width:600px;">
+            <div class="form-group">
+                <label>Key Name</label>
+                <input type="text" id="ssh-name" placeholder="my-laptop">
+            </div>
+            <div class="form-group">
+                <label>Public Key</label>
+                <textarea id="ssh-pubkey" rows="4" placeholder="ssh-rsa AAAA... user@host" style="width:100%;padding:.5rem .75rem;font-size:.9rem;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:monospace;resize:vertical;"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="addSSHKey()">Add Key</button>
+        </div>
+    </div>
+
+    <!-- ═══════ BILLING TAB ═══════ -->
+    <div class="tab-panel" id="tab-billing" style="display:none;">
+        <h3>Subscriptions</h3>
+        <table class="data-table" id="subs-table">
+            <thead>
+                <tr><th>Name</th><th>Plan</th><th>Status</th><th>Price</th><th>Renews</th></tr>
+            </thead>
+            <tbody id="subs-body">
+                <tr><td colspan="5" style="color:var(--text-muted); text-align:center;">Loading...</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Product Catalog</h3>
+        <table class="data-table" id="catalog-table">
+            <thead>
+                <tr><th>Name</th><th>Category</th><th>Price</th><th>Period</th><th>Description</th></tr>
+            </thead>
+            <tbody id="catalog-body">
+                <tr><td colspan="5" style="color:var(--text-muted); text-align:center;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" style="display:none; position:fixed; bottom:1.5rem; right:1.5rem; padding:.65rem 1.25rem; border-radius:var(--radius); font-size:.875rem; z-index:100; max-width:400px;"></div>
+
+<script>
+(function() {
+    let _provider = '';
+
+    // ── Toast ────────────────────────────────────────────────────────────────
+    function toast(msg, ok) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.style.display = 'block';
+        el.style.background = ok ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
+        el.style.color = ok ? 'var(--ok)' : 'var(--err)';
+        el.style.border = '1px solid ' + (ok ? 'rgba(34,197,94,.3)' : 'rgba(239,68,68,.3)');
+        clearTimeout(el._t);
+        el._t = setTimeout(function() { el.style.display = 'none'; }, 4000);
+    }
+    window._toast = toast;
+
+    // ── API helpers ──────────────────────────────────────────────────────────
+    function api(method, path, body) {
+        const opts = {
+            method: method,
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+        };
+        if (body !== undefined) opts.body = JSON.stringify(body);
+        return fetch(path, opts).then(function(r) {
+            return r.json().then(function(d) {
+                if (!r.ok) throw new Error(d.error || 'Request failed');
+                return d;
+            });
+        });
+    }
+
+    // ── Provider selection ───────────────────────────────────────────────────
+    window.selectProvider = function(name) {
+        _provider = name;
+        // Highlight card
+        document.querySelectorAll('.provider-card').forEach(function(c) {
+            c.style.borderColor = c.dataset.provider === name ? 'var(--primary)' : 'var(--border)';
+        });
+        document.getElementById('hosting-tabs').style.display = 'block';
+        switchTab('config');
+        // Pre-load domain list for DNS tab
+        loadDomainOptions();
+    };
+
+    // ── Tab switching ────────────────────────────────────────────────────────
+    window.switchTab = function(tab) {
+        document.querySelectorAll('.tab-panel').forEach(function(p) { p.style.display = 'none'; });
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        var panel = document.getElementById('tab-' + tab);
+        if (panel) panel.style.display = 'block';
+        document.querySelectorAll('.tab-btn[data-tab="'+tab+'"]').forEach(function(b) { b.classList.add('active'); });
+
+        // Auto-load data when switching tabs
+        if (tab === 'dns') loadDomainOptions();
+        if (tab === 'domains') loadDomains();
+        if (tab === 'vps') { loadVMs(); loadDataCenters(); }
+        if (tab === 'ssh') loadSSHKeys();
+        if (tab === 'billing') { loadSubscriptions(); loadCatalog(); }
+    };
+
+    // ── Config tab ───────────────────────────────────────────────────────────
+    window.saveConfig = function() {
+        var key = document.getElementById('cfg-api-key').value.trim();
+        var secret = document.getElementById('cfg-api-secret').value.trim();
+        if (!key) { toast('API key is required', false); return; }
+        api('POST', '/hosting/' + _provider + '/config', { api_key: key, api_secret: secret })
+            .then(function(d) {
+                toast('Credentials saved' + (d.connected ? ' — connection OK' : ' — connection failed'), d.connected);
+                updateConfigStatus(d.connected);
+            })
+            .catch(function(e) { toast('Save failed: ' + e.message, false); });
+    };
+
+    window.testConnection = function() {
+        api('POST', '/hosting/' + _provider + '/test', {})
+            .then(function(d) {
+                if (d.connected) {
+                    toast('Connection successful', true);
+                    updateConfigStatus(true);
+                } else {
+                    toast('Connection failed: ' + (d.error || 'unknown error'), false);
+                    updateConfigStatus(false);
+                }
+            })
+            .catch(function(e) { toast('Test failed: ' + e.message, false); });
+    };
+
+    function updateConfigStatus(ok) {
+        var el = document.getElementById('config-status');
+        if (ok) {
+            el.innerHTML = '<span class="badge badge-ok">Connected</span>';
+        } else {
+            el.innerHTML = '<span class="badge badge-err">Disconnected</span>';
+        }
+        // Update provider card badge
+        var card = document.querySelector('.provider-card[data-provider="'+_provider+'"]');
+        if (card) {
+            var p = card.querySelector('p');
+            if (p) p.innerHTML = ok
+                ? '<span class="badge badge-ok">Connected</span>'
+                : '<span class="badge badge-err">Disconnected</span>';
+        }
+    }
+
+    // ── DNS tab ──────────────────────────────────────────────────────────────
+    function loadDomainOptions() {
+        api('GET', '/hosting/' + _provider + '/domains')
+            .then(function(domains) {
+                var sel = document.getElementById('dns-domain-select');
+                var prev = sel.value;
+                sel.innerHTML = '<option value="">-- select domain --</option>';
+                if (domains && domains.length) {
+                    domains.forEach(function(d) {
+                        var opt = document.createElement('option');
+                        opt.value = d.name;
+                        opt.textContent = d.name;
+                        sel.appendChild(opt);
+                    });
+                }
+                if (prev) { sel.value = prev; }
+            })
+            .catch(function() {});
+    }
+
+    window.loadDNS = function() {
+        var domain = document.getElementById('dns-domain-select').value;
+        if (!domain) return;
+        var body = document.getElementById('dns-body');
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">Loading...</td></tr>';
+        api('GET', '/hosting/' + _provider + '/dns/' + encodeURIComponent(domain))
+            .then(function(records) {
+                if (!records || !records.length) {
+                    body.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">No records found</td></tr>';
+                    return;
+                }
+                body.innerHTML = '';
+                records.forEach(function(rec) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML =
+                        '<td><span class="badge">' + esc(rec.type) + '</span></td>' +
+                        '<td>' + esc(rec.name) + '</td>' +
+                        '<td><code>' + esc(rec.content) + '</code></td>' +
+                        '<td>' + rec.ttl + '</td>' +
+                        '<td>' + (rec.priority || '') + '</td>' +
+                        '<td><button class="btn btn-sm" onclick="deleteDNSRecord(\'' + esc(rec.name) + '\',\'' + esc(rec.type) + '\')" style="color:var(--err);">Delete</button></td>';
+                    body.appendChild(tr);
+                });
+            })
+            .catch(function(e) {
+                body.innerHTML = '<tr><td colspan="6" style="color:var(--err);text-align:center">' + esc(e.message) + '</td></tr>';
+            });
+    };
+
+    window.showAddDNS = function() { document.getElementById('dns-add-form').style.display = 'block'; };
+    window.hideAddDNS = function() { document.getElementById('dns-add-form').style.display = 'none'; };
+
+    window.saveDNSRecord = function() {
+        var domain = document.getElementById('dns-domain-select').value;
+        if (!domain) { toast('Select a domain first', false); return; }
+        var record = {
+            type: document.getElementById('dns-type').value,
+            name: document.getElementById('dns-name').value.trim(),
+            content: document.getElementById('dns-content').value.trim(),
+            ttl: parseInt(document.getElementById('dns-ttl').value) || 3600,
+            priority: parseInt(document.getElementById('dns-priority').value) || 0
+        };
+        api('PUT', '/hosting/' + _provider + '/dns/' + encodeURIComponent(domain), { records: [record], overwrite: false })
+            .then(function() { toast('DNS record saved', true); hideAddDNS(); loadDNS(); })
+            .catch(function(e) { toast('Save failed: ' + e.message, false); });
+    };
+
+    window.deleteDNSRecord = function(name, type) {
+        var domain = document.getElementById('dns-domain-select').value;
+        if (!confirm('Delete ' + type + ' record for ' + name + '?')) return;
+        api('DELETE', '/hosting/' + _provider + '/dns/' + encodeURIComponent(domain), { name: name, type: type })
+            .then(function() { toast('Record deleted', true); loadDNS(); })
+            .catch(function(e) { toast('Delete failed: ' + e.message, false); });
+    };
+
+    window.resetDNS = function() {
+        var domain = document.getElementById('dns-domain-select').value;
+        if (!domain) { toast('Select a domain first', false); return; }
+        if (!confirm('Reset ALL DNS records for ' + domain + ' to defaults? This cannot be undone.')) return;
+        api('POST', '/hosting/' + _provider + '/dns/' + encodeURIComponent(domain) + '/reset', {})
+            .then(function() { toast('DNS reset to defaults', true); loadDNS(); })
+            .catch(function(e) { toast('Reset failed: ' + e.message, false); });
+    };
+
+    // ── Domains tab ──────────────────────────────────────────────────────────
+    window.loadDomains = function() {
+        var body = document.getElementById('domains-body');
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">Loading...</td></tr>';
+        api('GET', '/hosting/' + _provider + '/domains')
+            .then(function(domains) {
+                if (!domains || !domains.length) {
+                    body.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">No domains found</td></tr>';
+                    return;
+                }
+                body.innerHTML = '';
+                domains.forEach(function(d) {
+                    var tr = document.createElement('tr');
+                    var exp = d.expires_at ? new Date(d.expires_at).toLocaleDateString() : '-';
+                    tr.innerHTML =
+                        '<td><strong>' + esc(d.name) + '</strong></td>' +
+                        '<td><span class="badge ' + (d.status === 'active' ? 'badge-ok' : 'badge-err') + '">' + esc(d.status) + '</span></td>' +
+                        '<td>' + exp + '</td>' +
+                        '<td>' +
+                            '<button class="btn btn-sm" onclick="toggleLock(\'' + esc(d.name) + '\',true)">Lock</button> ' +
+                            '<button class="btn btn-sm" onclick="toggleLock(\'' + esc(d.name) + '\',false)">Unlock</button>' +
+                        '</td>' +
+                        '<td>' +
+                            '<button class="btn btn-sm" onclick="togglePrivacy(\'' + esc(d.name) + '\',true)">On</button> ' +
+                            '<button class="btn btn-sm" onclick="togglePrivacy(\'' + esc(d.name) + '\',false)">Off</button>' +
+                        '</td>' +
+                        '<td><button class="btn btn-sm" onclick="editNameservers(\'' + esc(d.name) + '\')">NS</button></td>';
+                    body.appendChild(tr);
+                });
+            })
+            .catch(function(e) {
+                body.innerHTML = '<tr><td colspan="6" style="color:var(--err);text-align:center">' + esc(e.message) + '</td></tr>';
+            });
+    };
+
+    window.toggleLock = function(domain, lock) {
+        api('PUT', '/hosting/' + _provider + '/domains/' + encodeURIComponent(domain) + '/lock', { locked: lock })
+            .then(function() { toast('Lock ' + (lock ? 'enabled' : 'disabled'), true); loadDomains(); })
+            .catch(function(e) { toast(e.message, false); });
+    };
+
+    window.togglePrivacy = function(domain, privacy) {
+        api('PUT', '/hosting/' + _provider + '/domains/' + encodeURIComponent(domain) + '/privacy', { privacy: privacy })
+            .then(function() { toast('Privacy ' + (privacy ? 'enabled' : 'disabled'), true); loadDomains(); })
+            .catch(function(e) { toast(e.message, false); });
+    };
+
+    window.editNameservers = function(domain) {
+        var ns = prompt('Enter nameservers (comma-separated):', '');
+        if (ns === null) return;
+        var list = ns.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        if (!list.length) { toast('Provide at least one nameserver', false); return; }
+        api('PUT', '/hosting/' + _provider + '/domains/' + encodeURIComponent(domain) + '/nameservers', { nameservers: list })
+            .then(function() { toast('Nameservers updated', true); loadDomains(); })
+            .catch(function(e) { toast(e.message, false); });
+    };
+
+    window.checkDomain = function() {
+        var domain = document.getElementById('domain-check-input').value.trim();
+        if (!domain) return;
+        var tldsRaw = document.getElementById('domain-check-tlds').value.trim();
+        var tlds = tldsRaw.split(',').map(function(s) { return s.trim().replace(/^\./, ''); }).filter(Boolean);
+        if (!tlds.length) tlds = ['com','net','org','io','dev'];
+        var el = document.getElementById('domain-check-result');
+        el.innerHTML = '<span style="color:var(--text-muted)">Checking...</span>';
+        api('POST', '/hosting/' + _provider + '/domains/check', { domain: domain, tlds: tlds })
+            .then(function(results) {
+                el.innerHTML = '';
+                if (!results || !results.length) { el.innerHTML = '<span style="color:var(--text-muted)">No results</span>'; return; }
+                results.forEach(function(r) {
+                    var badge = r.available
+                        ? '<span class="badge badge-ok">Available</span>'
+                        : '<span class="badge badge-err">Taken</span>';
+                    var price = r.available && r.price ? ' &mdash; ' + (r.currency||'USD') + ' ' + r.price.toFixed(2) : '';
+                    el.innerHTML += '<p>' + esc(r.domain) + '.' + esc(r.tld) + ' ' + badge + price + '</p>';
+                });
+            })
+            .catch(function(e) { el.innerHTML = '<span style="color:var(--err)">' + esc(e.message) + '</span>'; });
+    };
+
+    window.purchaseDomain = function() {
+        var domain = document.getElementById('purchase-domain').value.trim();
+        if (!domain) { toast('Enter a domain', false); return; }
+        if (!confirm('Purchase ' + domain + '? This may charge your account.')) return;
+        api('POST', '/hosting/' + _provider + '/domains/purchase', {
+            domain: domain,
+            years: parseInt(document.getElementById('purchase-period').value),
+            auto_renew: document.getElementById('purchase-autorenew').checked,
+            privacy: document.getElementById('purchase-privacy').checked
+        })
+            .then(function() { toast('Domain purchased successfully', true); loadDomains(); })
+            .catch(function(e) { toast('Purchase failed: ' + e.message, false); });
+    };
+
+    // ── VPS tab ──────────────────────────────────────────────────────────────
+    window.loadVMs = function() {
+        var body = document.getElementById('vms-body');
+        body.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">Loading...</td></tr>';
+        api('GET', '/hosting/' + _provider + '/vms')
+            .then(function(vms) {
+                if (!vms || !vms.length) {
+                    body.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">No VMs found</td></tr>';
+                    return;
+                }
+                body.innerHTML = '';
+                vms.forEach(function(vm) {
+                    var statusClass = vm.status === 'running' ? 'badge-ok' : (vm.status === 'stopped' ? 'badge-err' : '');
+                    var ramGB = vm.ram_bytes ? (vm.ram_bytes / (1024*1024*1024)).toFixed(1) : '0';
+                    var diskGB = vm.disk_bytes ? (vm.disk_bytes / (1024*1024*1024)).toFixed(0) : '0';
+                    var tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = function() { viewVM(vm.id); };
+                    tr.innerHTML =
+                        '<td><strong>' + esc(vm.hostname || vm.id) + '</strong></td>' +
+                        '<td><span class="badge ' + statusClass + '">' + esc(vm.status) + '</span></td>' +
+                        '<td>' + esc(vm.plan) + '</td>' +
+                        '<td>' + esc(vm.data_center) + '</td>' +
+                        '<td><code>' + esc(vm.ip_address || '-') + '</code></td>' +
+                        '<td>' + vm.cpus + '</td>' +
+                        '<td>' + ramGB + ' GB</td>' +
+                        '<td>' + diskGB + ' GB</td>';
+                    body.appendChild(tr);
+                });
+            })
+            .catch(function(e) {
+                body.innerHTML = '<tr><td colspan="8" style="color:var(--err);text-align:center">' + esc(e.message) + '</td></tr>';
+            });
+    };
+
+    function viewVM(id) {
+        api('GET', '/hosting/' + _provider + '/vms/' + encodeURIComponent(id))
+            .then(function(vm) {
+                alert('VM: ' + vm.hostname + '\nIP: ' + (vm.ip_address || 'N/A') + '\nStatus: ' + vm.status + '\nOS: ' + (vm.os || 'N/A'));
+            })
+            .catch(function(e) { toast(e.message, false); });
+    }
+
+    function loadDataCenters() {
+        api('GET', '/hosting/' + _provider + '/datacenters')
+            .then(function(dcs) {
+                var sel = document.getElementById('vm-datacenter');
+                sel.innerHTML = '<option value="">-- select --</option>';
+                if (dcs && dcs.length) {
+                    dcs.forEach(function(dc) {
+                        var opt = document.createElement('option');
+                        opt.value = dc.id;
+                        opt.textContent = dc.name + ' (' + dc.location + ')';
+                        sel.appendChild(opt);
+                    });
+                }
+            })
+            .catch(function() {});
+        // Also load SSH keys for the VM form
+        api('GET', '/hosting/' + _provider + '/ssh-keys')
+            .then(function(keys) {
+                var sel = document.getElementById('vm-sshkey');
+                sel.innerHTML = '<option value="">None</option>';
+                if (keys && keys.length) {
+                    keys.forEach(function(k) {
+                        var opt = document.createElement('option');
+                        opt.value = k.id;
+                        opt.textContent = k.name;
+                        sel.appendChild(opt);
+                    });
+                }
+            })
+            .catch(function() {});
+    }
+
+    window.showCreateVM = function() {
+        document.getElementById('vm-create-form').style.display = 'block';
+        loadDataCenters();
+    };
+
+    window.createVM = function() {
+        var req = {
+            hostname: document.getElementById('vm-hostname').value.trim(),
+            plan: document.getElementById('vm-plan').value.trim(),
+            data_center_id: document.getElementById('vm-datacenter').value,
+            template: document.getElementById('vm-template').value.trim(),
+            password: document.getElementById('vm-password').value
+        };
+        var sshKey = document.getElementById('vm-sshkey').value;
+        if (sshKey) req.ssh_key_id = sshKey;
+
+        if (!req.plan || !req.data_center_id) {
+            toast('Plan and data center are required', false);
+            return;
+        }
+        api('POST', '/hosting/' + _provider + '/vms', req)
+            .then(function(vm) {
+                toast('VM created: ' + (vm.name || vm.id), true);
+                document.getElementById('vm-create-form').style.display = 'none';
+                loadVMs();
+            })
+            .catch(function(e) { toast('Create failed: ' + e.message, false); });
+    };
+
+    // ── SSH Keys tab ─────────────────────────────────────────────────────────
+    window.loadSSHKeys = function() {
+        var body = document.getElementById('ssh-body');
+        body.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted)">Loading...</td></tr>';
+        api('GET', '/hosting/' + _provider + '/ssh-keys')
+            .then(function(keys) {
+                if (!keys || !keys.length) {
+                    body.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted)">No SSH keys found</td></tr>';
+                    return;
+                }
+                body.innerHTML = '';
+                keys.forEach(function(k) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML =
+                        '<td><strong>' + esc(k.name) + '</strong></td>' +
+                        '<td><code>' + esc(k.fingerprint || '-') + '</code></td>' +
+                        '<td><button class="btn btn-sm" onclick="deleteSSHKey(\'' + esc(k.id) + '\',\'' + esc(k.name) + '\')" style="color:var(--err);">Delete</button></td>';
+                    body.appendChild(tr);
+                });
+            })
+            .catch(function(e) {
+                body.innerHTML = '<tr><td colspan="3" style="color:var(--err);text-align:center">' + esc(e.message) + '</td></tr>';
+            });
+    };
+
+    window.addSSHKey = function() {
+        var name = document.getElementById('ssh-name').value.trim();
+        var pubkey = document.getElementById('ssh-pubkey').value.trim();
+        if (!name || !pubkey) { toast('Name and public key are required', false); return; }
+        api('POST', '/hosting/' + _provider + '/ssh-keys', { name: name, public_key: pubkey })
+            .then(function() {
+                toast('SSH key added', true);
+                document.getElementById('ssh-name').value = '';
+                document.getElementById('ssh-pubkey').value = '';
+                loadSSHKeys();
+            })
+            .catch(function(e) { toast('Add failed: ' + e.message, false); });
+    };
+
+    window.deleteSSHKey = function(id, name) {
+        if (!confirm('Delete SSH key "' + name + '"?')) return;
+        api('DELETE', '/hosting/' + _provider + '/ssh-keys/' + encodeURIComponent(id))
+            .then(function() { toast('Key deleted', true); loadSSHKeys(); })
+            .catch(function(e) { toast('Delete failed: ' + e.message, false); });
+    };
+
+    // ── Billing tab ──────────────────────────────────────────────────────────
+    function loadSubscriptions() {
+        var body = document.getElementById('subs-body');
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">Loading...</td></tr>';
+        api('GET', '/hosting/' + _provider + '/subscriptions')
+            .then(function(subs) {
+                if (!subs || !subs.length) {
+                    body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">No subscriptions found</td></tr>';
+                    return;
+                }
+                body.innerHTML = '';
+                subs.forEach(function(s) {
+                    var statusClass = s.status === 'active' ? 'badge-ok' : (s.status === 'cancelled' ? 'badge-err' : '');
+                    var renews = s.renews_at ? new Date(s.renews_at).toLocaleDateString() : '-';
+                    var tr = document.createElement('tr');
+                    tr.innerHTML =
+                        '<td>' + esc(s.name) + '</td>' +
+                        '<td>' + esc(s.plan) + '</td>' +
+                        '<td><span class="badge ' + statusClass + '">' + esc(s.status) + '</span></td>' +
+                        '<td>' + (s.currency || 'USD') + ' ' + (s.price || 0).toFixed(2) + '</td>' +
+                        '<td>' + renews + '</td>';
+                    body.appendChild(tr);
+                });
+            })
+            .catch(function(e) {
+                body.innerHTML = '<tr><td colspan="5" style="color:var(--err);text-align:center">' + esc(e.message) + '</td></tr>';
+            });
+    }
+
+    function loadCatalog() {
+        var body = document.getElementById('catalog-body');
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">Loading...</td></tr>';
+        api('GET', '/hosting/' + _provider + '/catalog')
+            .then(function(items) {
+                if (!items || !items.length) {
+                    body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">No catalog items</td></tr>';
+                    return;
+                }
+                body.innerHTML = '';
+                items.forEach(function(item) {
+                    var price = (item.price_cents / 100).toFixed(2);
+                    var tr = document.createElement('tr');
+                    tr.innerHTML =
+                        '<td><strong>' + esc(item.name) + '</strong></td>' +
+                        '<td><span class="badge">' + esc(item.category) + '</span></td>' +
+                        '<td>' + (item.currency || 'USD') + ' ' + price + '</td>' +
+                        '<td>' + esc(item.period || '-') + '</td>' +
+                        '<td style="color:var(--text-muted); font-size:.85rem;">' + esc(item.description || '') + '</td>';
+                    body.appendChild(tr);
+                });
+            })
+            .catch(function(e) {
+                body.innerHTML = '<tr><td colspan="5" style="color:var(--err);text-align:center">' + esc(e.message) + '</td></tr>';
+            });
+    }
+
+    // ── Utility ──────────────────────────────────────────────────────────────
+    function esc(s) {
+        if (!s) return '';
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(s));
+        return d.innerHTML;
+    }
+})();
+</script>
+{{end}}

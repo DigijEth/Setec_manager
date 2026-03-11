@@ -1,0 +1,40 @@
+{{define "content"}}
+<h2>Float Mode Sessions</h2>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <p>Active Sessions: <strong>{{len .Data.Sessions}}</strong></p>
+    <form method="POST" action="/float/sessions/new"><button class="btn btn-primary">New Session</button></form>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr><th>Session ID</th><th>Target</th><th>Started</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+        {{range .Data.Sessions}}
+        <tr>
+            <td><code>{{.ID}}</code></td>
+            <td>{{.Target}}</td>
+            <td>{{.Started}}</td>
+            <td>
+                {{if eq .Status "active"}}
+                    <span class="badge badge-ok">Active</span>
+                {{else if eq .Status "paused"}}
+                    <span class="badge">Paused</span>
+                {{else}}
+                    <span class="badge badge-err">{{.Status}}</span>
+                {{end}}
+            </td>
+            <td>
+                <a href="/float/sessions/{{.ID}}" class="btn btn-sm">View</a>
+                <form method="POST" action="/float/sessions/{{.ID}}/stop" style="display:inline">
+                    <button class="btn btn-sm">Stop</button>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5">No active float sessions.</td></tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

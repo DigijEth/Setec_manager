@@ -1,0 +1,44 @@
+{{define "content"}}
+<div style="display:flex;justify-content:space-between;align-items:center">
+    <h2>Sites</h2>
+    <a href="/sites/new" class="btn btn-primary">+ New Site</a>
+</div>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Domain</th>
+            <th>Type</th>
+            <th>SSL</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Data.Sites}}
+        <tr>
+            <td><a href="/sites/{{.ID}}">{{.Domain}}</a></td>
+            <td>{{.Type}}</td>
+            <td>
+                {{if .SSL}}
+                    <span class="badge badge-ok">Active</span>
+                {{else}}
+                    <span class="badge badge-err">None</span>
+                {{end}}
+            </td>
+            <td>
+                {{if .Running}}
+                    <span class="badge badge-ok">Running</span>
+                {{else}}
+                    <span class="badge badge-err">Stopped</span>
+                {{end}}
+            </td>
+            <td>
+                <a href="/sites/{{.ID}}" class="btn btn-sm">View</a>
+            </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5">No sites configured.</td></tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

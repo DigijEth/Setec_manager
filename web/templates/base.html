@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setec App Manager{{if .Title}} — {{.Title}}{{end}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <img src="/static/img/sidebar-logo.svg" alt="Setec" class="sidebar-logo">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="/" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-dashboard"/></svg> Dashboard</a></li>
+            <li><a href="/sites" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-sites"/></svg> Sites</a></li>
+            <li><a href="/autarch" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-autarch"/></svg> AUTARCH</a></li>
+            <li><a href="/ssl" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-lock"/></svg> SSL/TLS</a></li>
+            <li><a href="/nginx" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-server"/></svg> Nginx</a></li>
+            <li><a href="/firewall" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-firewall"/></svg> Firewall</a></li>
+            <li><a href="/users" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-users"/></svg> Users</a></li>
+            <li><a href="/backups" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-backup"/></svg> Backups</a></li>
+            <li><a href="/hosting" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-hosting"/></svg> Hosting</a></li>
+            <li><a href="/monitor" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-monitor"/></svg> Monitor</a></li>
+            <li><a href="/logs" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-logs"/></svg> Logs</a></li>
+            <li><a href="/float/sessions" class="nav-link"><svg class="nav-icon"><use href="/static/img/icons.svg#icon-float"/></svg> Float Mode</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            {{if .Claims}}<span class="user-badge">{{.Claims.Username}}</span>{{end}}
+            <a href="/logout" class="nav-link logout">Logout</a>
+        </div>
+    </nav>
+    <main class="content">
+        {{template "content" .}}
+    </main>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

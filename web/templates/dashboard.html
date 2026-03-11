@@ -1,0 +1,53 @@
+{{define "content"}}
+<h2>Dashboard</h2>
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>System</h3>
+        <p><strong>Hostname:</strong> {{.Data.Hostname}}</p>
+        <p><strong>OS:</strong> {{.Data.OS}} / {{.Data.Arch}}</p>
+        <p><strong>CPUs:</strong> {{.Data.CPUs}}</p>
+        <p><strong>Uptime:</strong> {{.Data.Uptime}}</p>
+        <p><strong>Load:</strong> {{.Data.LoadAvg}}</p>
+    </div>
+    <div class="stat-card">
+        <h3>Memory</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{printf "%.0f" .Data.MemPercent}}%"></div>
+        </div>
+        <p>{{.Data.MemUsed}} / {{.Data.MemTotal}} ({{printf "%.1f" .Data.MemPercent}}%)</p>
+    </div>
+    <div class="stat-card">
+        <h3>Disk</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{printf "%.0f" .Data.DiskPercent}}%"></div>
+        </div>
+        <p>{{.Data.DiskUsed}} / {{.Data.DiskTotal}} ({{printf "%.1f" .Data.DiskPercent}}%)</p>
+    </div>
+    <div class="stat-card">
+        <h3>Sites</h3>
+        <p class="big-number">{{.Data.SiteCount}}</p>
+        <a href="/sites" class="btn btn-sm">Manage Sites</a>
+    </div>
+</div>
+
+<h3>Services</h3>
+<table class="data-table">
+    <thead>
+        <tr><th>Service</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+        {{range .Data.Services}}
+        <tr>
+            <td>{{.Name}}</td>
+            <td>
+                {{if .Running}}
+                    <span class="badge badge-ok">{{.Status}}</span>
+                {{else}}
+                    <span class="badge badge-err">{{.Status}}</span>
+                {{end}}
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

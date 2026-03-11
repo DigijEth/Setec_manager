@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Shield shape -->
+  <path d="M100 10 L180 50 L180 120 Q180 170 100 190 Q20 170 20 120 L20 50 Z"
+        fill="url(#grad)" opacity="0.15" stroke="url(#grad)" stroke-width="2"/>
+  <!-- Inner shield -->
+  <path d="M100 25 L165 58 L165 115 Q165 158 100 175 Q35 158 35 115 L35 58 Z"
+        fill="none" stroke="url(#grad)" stroke-width="1.5" opacity="0.4"/>
+  <!-- S letter -->
+  <text x="100" y="125" font-family="monospace" font-size="90" font-weight="bold"
+        fill="url(#grad)" text-anchor="middle" filter="url(#glow)">S</text>
+  <!-- Circuit lines -->
+  <line x1="55" y1="155" x2="30" y2="155" stroke="#6366f1" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="30" cy="155" r="3" fill="#6366f1" opacity="0.5"/>
+  <line x1="145" y1="155" x2="170" y2="155" stroke="#a855f7" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="170" cy="155" r="3" fill="#a855f7" opacity="0.5"/>
+  <line x1="100" y1="45" x2="100" y2="25" stroke="#6366f1" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="100" cy="22" r="3" fill="#6366f1" opacity="0.5"/>
+</svg>

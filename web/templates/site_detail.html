@@ -1,0 +1,63 @@
+{{define "content"}}
+<div style="display:flex;justify-content:space-between;align-items:center">
+    <h2>{{.Data.Site.Domain}}</h2>
+    <div style="display:flex;gap:.5rem">
+        {{if .Data.Site.Running}}
+            <form method="POST" action="/sites/{{.Data.Site.ID}}/stop"><button class="btn btn-sm">Stop</button></form>
+        {{else}}
+            <form method="POST" action="/sites/{{.Data.Site.ID}}/start"><button class="btn btn-sm btn-primary">Start</button></form>
+        {{end}}
+        <form method="POST" action="/sites/{{.Data.Site.ID}}/deploy"><button class="btn btn-sm btn-primary">Deploy</button></form>
+        <a href="/sites" class="btn btn-sm">Back</a>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Info</h3>
+        <p><strong>Type:</strong> {{.Data.Site.Type}}</p>
+        <p><strong>Root:</strong> {{.Data.Site.Root}}</p>
+        <p><strong>Status:</strong>
+            {{if .Data.Site.Running}}
+                <span class="badge badge-ok">Running</span>
+            {{else}}
+                <span class="badge badge-err">Stopped</span>
+            {{end}}
+        </p>
+    </div>
+    <div class="stat-card">
+        <h3>SSL</h3>
+        {{if .Data.Site.SSL}}
+            <span class="badge badge-ok">Active</span>
+            <p><strong>Expires:</strong> {{.Data.Site.SSLExpiry}}</p>
+        {{else}}
+            <span class="badge badge-err">Not Configured</span>
+        {{end}}
+    </div>
+</div>
+
+<h3>Deployment History</h3>
+<table class="data-table">
+    <thead>
+        <tr><th>Date</th><th>Commit</th><th>Status</th><th>Duration</th></tr>
+    </thead>
+    <tbody>
+        {{range .Data.Deployments}}
+        <tr>
+            <td>{{.Date}}</td>
+            <td><code>{{.Commit}}</code></td>
+            <td>
+                {{if eq .Status "ok"}}
+                    <span class="badge badge-ok">OK</span>
+                {{else}}
+                    <span class="badge badge-err">{{.Status}}</span>
+                {{end}}
+            </td>
+            <td>{{.Duration}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="4">No deployments yet.</td></tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

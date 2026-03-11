@@ -1,0 +1,31 @@
+{{define "content"}}
+<div style="display:flex;justify-content:space-between;align-items:center">
+    <h2>Backups</h2>
+    <form method="POST" action="/backups/create"><button class="btn btn-primary">Create Backup</button></form>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr><th>Name</th><th>Size</th><th>Date</th><th>Type</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+        {{range .Data.Backups}}
+        <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Size}}</td>
+            <td>{{.Date}}</td>
+            <td><span class="badge badge-ok">{{.Type}}</span></td>
+            <td>
+                <a href="/backups/download/{{.Name}}" class="btn btn-sm">Download</a>
+                <form method="POST" action="/backups/restore/{{.Name}}" style="display:inline"
+                      onsubmit="return confirm('Restore from {{.Name}}?')">
+                    <button class="btn btn-sm">Restore</button>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5">No backups found.</td></tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

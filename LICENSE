@@ -1,0 +1,194 @@
+SETEC APP MANAGER — RESTRICTED USE LICENSE
+Version 1.0
+
+Copyright (c) 2026 darkHal Security Group & Setec Security Labs
+All Rights Reserved.
+
+TERMS AND CONDITIONS
+
+1. DEFINITIONS
+
+   "Software" refers to Setec App Manager, including all source code,
+   binaries, documentation, templates, and associated files.
+
+   "Defensive Use" means use solely for the purpose of protecting
+   systems, networks, data, and individuals from unauthorized access,
+   exploitation, cyberattack, or other malicious activity. This includes
+   but is not limited to: security research, penetration testing with
+   authorization, incident response, threat hunting, vulnerability
+   management, security operations, and digital forensics conducted in
+   defense of systems and their users.
+
+   "Commercial Use" means any use that does not qualify as Defensive Use,
+   including but not limited to: resale, redistribution, incorporation
+   into commercial products, use by offensive threat actors, use for
+   surveillance without lawful authority, or any use intended to cause
+   harm to systems or individuals.
+
+   "Government Entity" means any national, federal, state, provincial,
+   regional, municipal, or local government body, agency, department,
+   ministry, military branch, intelligence service, law enforcement
+   agency, regulatory body, or any organization acting on behalf of or
+   funded primarily by any such entity, in any country or jurisdiction
+   worldwide.
+
+   "Civilian Population" means any individual, group, organization, or
+   entity that is not a Government Entity, including but not limited to:
+   private citizens, journalists, activists, non-governmental
+   organizations, religious institutions, political parties, unions,
+   and private enterprises.
+
+2. GRANT OF LICENSE — DEFENSIVE USE
+
+   Permission is hereby granted, free of charge, to any person or
+   organization obtaining a copy of this Software, to use, copy, modify,
+   and deploy the Software for Defensive Use only, subject to the
+   following conditions:
+
+   a) This license notice shall be included in all copies or substantial
+      portions of the Software.
+
+   b) The Software shall not be used for any purpose that causes harm to
+      individuals, organizations, or systems, except as part of
+      authorized security testing.
+
+3. COMMERCIAL USE LICENSE
+
+   Any use of this Software that does not qualify as Defensive Use
+   requires a Commercial Use License.
+
+   The Commercial Use License fee is ONE MILLION UNITED STATES DOLLARS
+   ($1,000,000.00 USD) per user, per year.
+
+   Commercial Use without a valid license is strictly prohibited and
+   constitutes a violation of this agreement and applicable copyright law.
+
+   To obtain a Commercial Use License, contact:
+   licensing@setec-security.com
+
+4. GOVERNMENT USE RESTRICTIONS
+
+   a) PERMITTED USE: A Government Entity may use this Software ONLY to
+      test, audit, assess, and secure its OWN systems, networks, and
+      infrastructure. A government may only target itself.
+
+   b) PROHIBITED USE — AGAINST CIVILIAN POPULATIONS: No Government Entity
+      may use this Software, in whole or in part, in any manner that
+      targets, monitors, surveils, disrupts, censors, suppresses, or
+      otherwise acts against any Civilian Population, whether domestic
+      or foreign. This prohibition is absolute and applies regardless of
+      any claimed legal authority, executive order, court order, national
+      security justification, or state of emergency.
+
+   c) PROHIBITED USE — AGAINST OTHER NATIONS: No Government Entity may
+      use this Software to target, attack, surveil, disrupt, or
+      interfere with the systems, networks, infrastructure, or people
+      of any other nation, state, or territory.
+
+   d) PROHIBITED USE — SUPPRESSION OF RIGHTS: No Government Entity may
+      use this Software to suppress, restrict, or interfere with freedom
+      of speech, freedom of the press, freedom of assembly, freedom of
+      religion, the right to privacy, or any other fundamental human
+      right as recognized by the Universal Declaration of Human Rights.
+
+   e) NO MODIFICATION: Government Entities may NOT modify, extend, or
+      create derivative works of this Software. Government use is
+      limited to the unmodified, officially released version only.
+
+   f) VIOLATION: Any Government Entity found in violation of this section
+      shall have its license immediately and irrevocably terminated, and
+      shall be liable for the Commercial Use License fee of $1,000,000
+      per user, per instance, retroactive to the date of first use, in
+      addition to any other legal remedies available.
+
+   This Software will NOT be used as a tool of oppression. It exists to
+   protect people, not to be weaponized against them.
+
+5. GENERAL RESTRICTIONS
+
+   a) This Software may NOT be used, copied, modified, merged, published,
+      distributed, sublicensed, or sold without explicit written
+      permission from darkHal Security Group & Setec Security Labs,
+      except as granted under Section 2.
+
+   b) This Software may NOT be used to facilitate unauthorized access to
+      systems, networks, or data.
+
+   c) This Software may NOT be reverse engineered, decompiled, or
+      disassembled for the purpose of creating competing products.
+
+   d) This Software may NOT be redistributed in any form — source or
+      binary — without prior written consent.
+
+6. LIMITATION OF LIABILITY AND LEGAL DISCLAIMER
+
+   a) TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT
+      SHALL SETEC SECURITY LABS, DARKHAL SECURITY GROUP, THEIR
+      FOUNDERS, MEMBERS, EMPLOYEES, CONTRACTORS, AFFILIATES, PARTNERS,
+      SUCCESSORS, OR ASSIGNS (COLLECTIVELY, "THE PROVIDERS") BE LIABLE
+      FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY WHATSOEVER, WHETHER IN
+      AN ACTION OF CONTRACT, TORT, NEGLIGENCE, STRICT LIABILITY, OR
+      OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE
+      SOFTWARE OR THE USE, MISUSE, OR INABILITY TO USE THE SOFTWARE.
+
+   b) WITHOUT LIMITING THE FOREGOING, THE PROVIDERS SHALL NOT BE LIABLE
+      FOR ANY:
+      - Direct, indirect, incidental, special, consequential, punitive,
+        or exemplary damages
+      - Loss of data, files, databases, or digital assets
+      - Loss of revenue, profits, business, contracts, or anticipated
+        savings
+      - Loss of goodwill or reputation
+      - Business interruption or system downtime
+      - Cost of procurement of substitute goods or services
+      - Personal injury, bodily harm, or loss of life
+      - Damages resulting from unauthorized access to or alteration of
+        your transmissions or data
+      - Any other loss, damage, cost, or expense of any kind whatsoever
+
+      EVEN IF THE PROVIDERS HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH
+      DAMAGES, AND REGARDLESS OF WHETHER SUCH DAMAGES ARISE IN CONTRACT,
+      TORT, NEGLIGENCE, STRICT LIABILITY, OR ANY OTHER LEGAL THEORY.
+
+   c) THE USER ASSUMES ALL RISK AND RESPONSIBILITY FOR THE INSTALLATION,
+      USE, AND RESULTS OBTAINED FROM THE SOFTWARE. THE PROVIDERS BEAR
+      NO RESPONSIBILITY WHATSOEVER FOR THE ACTIONS, DECISIONS, OR
+      CONSEQUENCES ARISING FROM ANY PERSON'S OR ENTITY'S USE OF THIS
+      SOFTWARE.
+
+   d) THIS SOFTWARE IS A TOOL. LIKE ANY TOOL, IT CAN BE USED OR MISUSED.
+      THE PROVIDERS ARE NOT RESPONSIBLE FOR HOW ANY PARTY CHOOSES TO
+      USE IT. RESPONSIBILITY FOR ALL ACTIONS TAKEN WITH THIS SOFTWARE
+      RESTS SOLELY AND ENTIRELY WITH THE USER.
+
+7. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY
+   OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+   WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+   NON-INFRINGEMENT, ACCURACY, COMPLETENESS, RELIABILITY, SECURITY,
+   OR AVAILABILITY. THE PROVIDERS DO NOT WARRANT THAT THE SOFTWARE WILL
+   BE UNINTERRUPTED, ERROR-FREE, SECURE, OR FREE OF VIRUSES OR OTHER
+   HARMFUL COMPONENTS.
+
+8. INDEMNIFICATION
+
+   You agree to indemnify, defend, and hold harmless the Providers from
+   and against any and all claims, damages, losses, liabilities, costs,
+   and expenses (including reasonable attorneys' fees) arising from or
+   related to your use or misuse of the Software, your violation of this
+   License, or your violation of any rights of any third party.
+
+9. TERMINATION
+
+   This license is automatically and immediately terminated if you
+   violate any of its terms. Upon termination, you must destroy all
+   copies of the Software in your possession. Sections 4, 5, 6, 7, 8,
+   and 10 survive termination.
+
+10. GOVERNING LAW
+
+    This license shall be governed by and construed in accordance with
+    applicable copyright and intellectual property law. If any provision
+    of this License is held to be unenforceable, the remaining provisions
+    shall continue in full force and effect.
