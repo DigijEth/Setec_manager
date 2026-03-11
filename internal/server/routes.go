@@ -22,6 +22,7 @@ func (s *Server) setupRoutes() {
 		r.Get("/login", s.handleLoginPage)
 		r.With(s.loginRateLimit).Post("/login", s.handleLogin)
 		r.Post("/logout", s.handleLogout)
+		r.Get("/debug/auth", s.handleDebugAuth) // TEMP — remove after login works
 	})
 
 	// Authenticated routes

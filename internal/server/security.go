@@ -77,7 +77,15 @@ func csrfProtection(next http.Handler) http.Handler {
 			return
 		}
 
-		// For mutating requests, validate CSRF token
+		// JSON requests skip CSRF — browsers cannot send cross-origin
+		// JSON via form submissions, so Content-Type is sufficient defense.
+		contentType := r.Header.Get("Content-Type")
+		if strings.Contains(contentType, "application/json") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// For non-JSON mutating requests, validate CSRF token
 		cookie, err := r.Cookie(csrfCookieName)
 		if err != nil {
 			http.Error(w, "CSRF token missing", http.StatusForbidden)
@@ -88,16 +96,6 @@ func csrfProtection(next http.Handler) http.Handler {
 		token := r.Header.Get(csrfHeaderName)
 		if token == "" {
 			token = r.FormValue(csrfFormField)
-		}
-
-		// API requests with JSON Content-Type skip CSRF validation.
-		// JSON requests are not vulnerable to CSRF because browsers
-		// cannot send cross-origin JSON via form submissions — the
-		// Content-Type itself acts as a CSRF defense.
-		contentType := r.Header.Get("Content-Type")
-		if strings.Contains(contentType, "application/json") {
-			next.ServeHTTP(w, r)
-			return
 		}
 
 		if token != cookie.Value {

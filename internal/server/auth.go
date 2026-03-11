@@ -32,19 +32,25 @@ type loginResponse struct {
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[auth] Failed to decode login request: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("[auth] Login attempt for user: %q", req.Username)
+
 	user, err := s.DB.AuthenticateUser(req.Username, req.Password)
 	if err != nil {
+		log.Printf("[auth] AuthenticateUser error: %v", err)
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 	if user == nil {
+		log.Printf("[auth] Authentication failed for user: %q", req.Username)
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
+	log.Printf("[auth] Login successful for user: %q (id=%d)", user.Username, user.ID)
 
 	// Load user's group names for JWT
 	groups, err := s.DB.GetUserGroupNames(user.ID)
@@ -118,6 +124,35 @@ func (s *Server) handleAuthStatus(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 	s.renderTemplate(w, "login.html", nil)
+}
+
+// Temporary debug endpoint — remove after login is working
+func (s *Server) handleDebugAuth(w http.ResponseWriter, r *http.Request) {
+	count, err := s.DB.ManagerUserCount()
+	if err != nil {
+		writeJSON(w, 500, map[string]interface{}{"error": err.Error()})
+		return
+	}
+	users, err := s.DB.ListManagerUsers()
+	if err != nil {
+		writeJSON(w, 500, map[string]interface{}{"error": err.Error()})
+		return
+	}
+	var userList []map[string]interface{}
+	for _, u := range users {
+		userList = append(userList, map[string]interface{}{
+			"id":            u.ID,
+			"username":      u.Username,
+			"role":          u.Role,
+			"hash_len":      len(u.PasswordHash),
+			"hash_prefix":   u.PasswordHash[:10],
+			"force_change":  u.ForceChange,
+		})
+	}
+	writeJSON(w, 200, map[string]interface{}{
+		"user_count": count,
+		"users":      userList,
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
