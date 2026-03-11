@@ -19,9 +19,12 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg);
     color: var(--text);
-    display: flex;
     min-height: 100vh;
     line-height: 1.5;
+}
+
+body.login-page {
+    display: flex;
 }
 
 /* ── Sidebar ── */
