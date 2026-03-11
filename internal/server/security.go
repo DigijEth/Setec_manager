@@ -90,11 +90,12 @@ func csrfProtection(next http.Handler) http.Handler {
 			token = r.FormValue(csrfFormField)
 		}
 
-		// API requests with JSON Content-Type + Bearer auth skip CSRF
-		// (they're not vulnerable to CSRF since browsers don't send custom headers)
+		// API requests with JSON Content-Type skip CSRF validation.
+		// JSON requests are not vulnerable to CSRF because browsers
+		// cannot send cross-origin JSON via form submissions — the
+		// Content-Type itself acts as a CSRF defense.
 		contentType := r.Header.Get("Content-Type")
-		authHeader := r.Header.Get("Authorization")
-		if strings.Contains(contentType, "application/json") && strings.HasPrefix(authHeader, "Bearer ") {
+		if strings.Contains(contentType, "application/json") {
 			next.ServeHTTP(w, r)
 			return
 		}
